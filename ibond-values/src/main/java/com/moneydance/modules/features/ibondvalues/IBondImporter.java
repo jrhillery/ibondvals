@@ -14,7 +14,7 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
-import java.time.Month;
+import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -23,6 +23,9 @@ import java.util.Properties;
 import java.util.TreeMap;
 
 import static java.math.RoundingMode.HALF_EVEN;
+import static java.time.temporal.ChronoField.DAY_OF_MONTH;
+import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
+import static java.time.temporal.ChronoField.YEAR;
 import static org.apache.poi.ss.usermodel.CellType.STRING;
 import static org.apache.poi.ss.usermodel.Row.MissingCellPolicy.RETURN_BLANK_AS_NULL;
 
@@ -123,6 +126,22 @@ public class IBondImporter {
    } // end getIBondRates(URI)
 
    /**
+    * Determine I bond issue date by parsing the ticker symbol.
+    * @param tickerSymbol Ticker symbol in the format ibondYYYYMM
+    * @return Date corresponding to the first day of the issue month
+    */
+   private static LocalDate getDateForTicker(String tickerSymbol) {
+      DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder()
+         .parseCaseInsensitive()
+         .appendLiteral("ibond")
+         .appendValue(YEAR)
+         .appendValue(MONTH_OF_YEAR, 2)
+         .parseDefaulting(DAY_OF_MONTH, 1);
+
+      return LocalDate.parse(tickerSymbol, formatterBuilder.toFormatter());
+   } // end getDateForTicker(String)
+
+   /**
     * Add I bond prices for months that do not compound to a specified list.
     * @param iBondPrice Initial I bond price
     * @param compositeRate Composite interest rate to use
@@ -202,7 +221,7 @@ public class IBondImporter {
          IBondImporter importer = new IBondImporter();
          URI uri = new URI(importer.getProperty("url.treasurydirect"));
          NavigableMap<LocalDate, IBondRateRec> iBondRates = importer.getIBondRates(uri);
-         LocalDate issueDate = LocalDate.of(2024, Month.APRIL, 13);
+         LocalDate issueDate = getDateForTicker("ibond202304");
          List<PriceRec> iBondPrices = getIBondPrices(issueDate, iBondRates);
          BigDecimal shares = BigDecimal.valueOf(10000);
 
