@@ -83,6 +83,17 @@ public class IBondImporter {
    } // end getDataRowIterator(URI)
 
    /**
+    * Retrieve a numeric value from a spreadsheet cell
+    * and clean it up to avoid lots of zeros and nines.
+    * @param cell Cell to interrogate
+    * @return Double value rounded to the tenth place past the decimal point
+    */
+   private static double getNumericClean(Cell cell) {
+
+      return MdUtil.roundPrice(cell.getNumericCellValue()).doubleValue();
+   } // end getNumericClean(Cell)
+
+   /**
     * Load I bond interest rate history from the spreadsheet at a specified URI.
     * @param iBondRateHistory Spreadsheet location
     * @return Navigable map containing historical I bond interest rates
@@ -115,8 +126,8 @@ public class IBondImporter {
          Cell sDateCell = row.getCell(sDateCol, RETURN_BLANK_AS_NULL);
 
          if (iRateCell != null && fRateCell != null && sDateCell != null) {
-            double inflateRate = iRateCell.getNumericCellValue();
-            double fixedRate = fRateCell.getNumericCellValue();
+            double inflateRate = getNumericClean(iRateCell);
+            double fixedRate = getNumericClean(fRateCell);
             LocalDate startDate = sDateCell.getLocalDateTimeCellValue().toLocalDate();
             iBondRates.put(startDate, new IBondRateRec(inflateRate, fixedRate, startDate));
          }
