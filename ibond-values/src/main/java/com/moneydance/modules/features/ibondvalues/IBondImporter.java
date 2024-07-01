@@ -104,7 +104,7 @@ public class IBondImporter {
     * Load I bond interest rate history from the spreadsheet at a specified URI.
     * @return Navigable map containing historical I bond interest rates
     */
-   private NavigableMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
+   public NavigableMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
       Iterator<Row> dataRowItr = getDataRowIterator();
       Row row = dataRowItr.next();
       int iRateCol = -1, fRateCol = -1, sDateCol = -1;
@@ -146,7 +146,7 @@ public class IBondImporter {
     * @param tickerSymbol Ticker symbol in the format ibondYYYYMM
     * @return Date corresponding to the first day of the issue month
     */
-   private static LocalDate getDateForTicker(String tickerSymbol) {
+   public static LocalDate getDateForTicker(String tickerSymbol) {
       DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder()
          .parseCaseInsensitive()
          .appendLiteral("ibond")
@@ -206,7 +206,7 @@ public class IBondImporter {
     * @param iBondRates Historical I bond interest rates
     * @return List containing I bond prices
     */
-   private static List<PriceRec> getIBondPrices(
+   public static List<PriceRec> getIBondPrices(
          LocalDate issueDate, NavigableMap<LocalDate, IBondRateRec> iBondRates) {
       ArrayList<PriceRec> iBondPrices = new ArrayList<>();
       LocalDate period = issueDate.withDayOfMonth(1);
