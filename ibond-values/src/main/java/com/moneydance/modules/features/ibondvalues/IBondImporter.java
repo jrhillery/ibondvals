@@ -30,6 +30,8 @@ import static org.apache.poi.ss.usermodel.CellType.STRING;
 import static org.apache.poi.ss.usermodel.Row.MissingCellPolicy.RETURN_BLANK_AS_NULL;
 
 public class IBondImporter {
+   /** Spreadsheet location */
+   private URI iBondRateHistory = null;
    private Properties props = null;
    private static final String propertiesFileName = "ibond-values.properties";
 
@@ -60,16 +62,21 @@ public class IBondImporter {
 
    /**
     * Retrieve a row iterator over the data sheet of the spreadsheet at a specified URI.
-    * @param iBondRateHistory Spreadsheet location
     * @return Row iterator
     */
-   private Iterator<Row> getDataRowIterator(URI iBondRateHistory) throws MduException {
+   private Iterator<Row> getDataRowIterator() throws MduException {
+      String uriStr = getProperty("url.treasurydirect");
+      try {
+         this.iBondRateHistory = new URI(uriStr);
+      } catch (URISyntaxException e) {
+         throw new MduException(e, "Problem parsing URL [%s]", uriStr);
+      }
       Workbook wb;
 
-      try (InputStream iStream = iBondRateHistory.toURL().openStream()) {
+      try (InputStream iStream = this.iBondRateHistory.toURL().openStream()) {
          wb = WorkbookFactory.create(iStream);
       } catch (IOException e) {
-         throw new MduException(e, "Problem accessing %s", iBondRateHistory);
+         throw new MduException(e, "Problem accessing %s", this.iBondRateHistory);
       } // end try-with-resources
 
       String dataSheetName = getProperty("sheet.data");
@@ -77,10 +84,10 @@ public class IBondImporter {
 
       if (dataSheet == null)
          throw new MduException(null, "Unable to find sheet %s in %s",
-            dataSheetName, iBondRateHistory);
+            dataSheetName, this.iBondRateHistory);
 
       return dataSheet.rowIterator();
-   } // end getDataRowIterator(URI)
+   } // end getDataRowIterator()
 
    /**
     * Retrieve a numeric value from a spreadsheet cell
@@ -95,12 +102,10 @@ public class IBondImporter {
 
    /**
     * Load I bond interest rate history from the spreadsheet at a specified URI.
-    * @param iBondRateHistory Spreadsheet location
     * @return Navigable map containing historical I bond interest rates
     */
-   private NavigableMap<LocalDate, IBondRateRec> getIBondRates(URI iBondRateHistory)
-         throws MduException {
-      Iterator<Row> dataRowItr = getDataRowIterator(iBondRateHistory);
+   private NavigableMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
+      Iterator<Row> dataRowItr = getDataRowIterator();
       Row row = dataRowItr.next();
       int iRateCol = -1, fRateCol = -1, sDateCol = -1;
 
@@ -116,7 +121,7 @@ public class IBondImporter {
 
       if (iRateCol < 0 || fRateCol < 0 || sDateCol < 0)
          throw new MduException(null, "Unable to locate column headers in %s",
-            iBondRateHistory);
+            this.iBondRateHistory);
       TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
 
       while (dataRowItr.hasNext()) {
@@ -134,7 +139,7 @@ public class IBondImporter {
       } // end while more rows
 
       return iBondRates;
-   } // end getIBondRates(URI)
+   } // end getIBondRates()
 
    /**
     * Determine I bond issue date by parsing the ticker symbol.
@@ -230,8 +235,7 @@ public class IBondImporter {
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         URI uri = new URI(importer.getProperty("url.treasurydirect"));
-         NavigableMap<LocalDate, IBondRateRec> iBondRates = importer.getIBondRates(uri);
+         NavigableMap<LocalDate, IBondRateRec> iBondRates = importer.getIBondRates();
          LocalDate issueDate = getDateForTicker("ibond202304");
          List<PriceRec> iBondPrices = getIBondPrices(issueDate, iBondRates);
          BigDecimal shares = BigDecimal.valueOf(10000);
@@ -240,7 +244,7 @@ public class IBondImporter {
             System.out.println("Balance on " + iBondPriceRec.date() + " = "
                + shares.multiply(iBondPriceRec.sharePrice()));
          }
-      } catch (URISyntaxException | MduException e) {
+      } catch (MduException e) {
          throw new RuntimeException(e);
       }
 
