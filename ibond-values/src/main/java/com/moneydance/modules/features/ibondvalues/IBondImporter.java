@@ -120,8 +120,8 @@ public class IBondImporter {
       } // end for each cell
 
       if (iRateCol < 0 || fRateCol < 0 || sDateCol < 0)
-         throw new MduException(null, "Unable to locate column headers in %s",
-            this.iBondRateHistory);
+         throw new MduException(null, "Unable to locate column headers %s in %s",
+            IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
       TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
 
       while (dataRowItr.hasNext()) {

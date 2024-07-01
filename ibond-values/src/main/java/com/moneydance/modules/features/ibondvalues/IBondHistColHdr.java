@@ -1,6 +1,7 @@
 package com.moneydance.modules.features.ibondvalues;
 
 import java.util.HashMap;
+import java.util.Set;
 
 /**
  * Enumerates the column headers we reference.
@@ -45,5 +46,14 @@ public enum IBondHistColHdr {
       else
          return colHdr;
    } // end getEnum(String)
+
+   /**
+    * Retrieve the column headers names we are using.
+    * @return Set of column headers names
+    */
+   public static Set<String> getColumnHeaders() {
+
+      return valMap.keySet();
+   } // end getColumnHeaders()
 
 } // end enum IBondHistColHdr
