@@ -1,14 +1,21 @@
 package com.moneydance.modules.features.ibondvalues;
 
+import com.infinitekind.moneydance.model.CurrencySnapshot;
+import com.infinitekind.moneydance.model.CurrencyTable;
 import com.infinitekind.moneydance.model.CurrencyType;
 import com.leastlogic.mdimport.util.SecurityHandler;
+import com.leastlogic.moneydance.util.MdUtil;
 import com.leastlogic.moneydance.util.MduException;
+import com.leastlogic.moneydance.util.SnapshotList;
 import com.leastlogic.moneydance.util.StagedInterface;
+import com.leastlogic.swing.util.HTMLPane;
 import com.moneydance.apps.md.controller.FeatureModuleContext;
 
 import javax.swing.SwingWorker;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.concurrent.CancellationException;
@@ -20,9 +27,10 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    private final IBondWindow iBondWindow;
    private final String extensionName;
    private final IBondImporter importer;
+   private final CurrencyTable securities;
    private final CountDownLatch finishedLatch = new CountDownLatch(1);
 
-   private final LinkedHashMap<CurrencyType, SecurityHandler> priceChanges = new LinkedHashMap<>();
+   private final List<SecurityHandler> priceChanges = new ArrayList<>();
 
    /**
     * Sole constructor.
@@ -37,10 +45,21 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       this.iBondWindow = iBondWindow;
       this.extensionName = extensionName;
       this.importer = new IBondImporter();
+      this.securities =  fmContext.getCurrentAccountBook().getCurrencies();
       iBondWindow.setStaged(this);
       iBondWindow.addCloseableResource(this);
 
    } // end constructor
+
+   /**
+    * Add a security handler to our collection.
+    *
+    * @param handler A deferred update security handler to store
+    */
+   private void addHandler(SecurityHandler handler) {
+      this.priceChanges.add(handler);
+
+   } // end addHandler(SecurityHandler)
 
    /**
     * Commit any changes to Moneydance.
@@ -50,7 +69,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    public String commitChanges() {
       int numPricesSet = this.priceChanges.size();
 
-      for (SecurityHandler sHandler : this.priceChanges.values()) {
+      for (SecurityHandler sHandler : this.priceChanges) {
          sHandler.applyUpdate();
       }
 
@@ -67,6 +86,38 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end isModified()
 
    /**
+    * @return A currency number format
+    */
+   private NumberFormat getCurrencyFormat() {
+
+      return NumberFormat.getCurrencyInstance(this.iBondWindow.getLocale());
+   } // end getCurrencyFormat()
+
+   private void storePriceQuoteIfDiff(CurrencyType security, PriceRec priceRec) {
+      BigDecimal price = priceRec.sharePrice();
+      int priceDate = MdUtil.convLocalToDateInt(priceRec.date());
+      SnapshotList ssList = new SnapshotList(security);
+      CurrencySnapshot snapshot = ssList.getSnapshotForDate(priceDate);
+      BigDecimal oldPrice = snapshot == null ? BigDecimal.ONE
+         : MdUtil.convRateToPrice(snapshot.getRate());
+
+      // store this quote if it differs
+      if (snapshot == null || priceDate != snapshot.getDateInt()
+            || price.compareTo(oldPrice) != 0) {
+         NumberFormat priceFmt = getCurrencyFormat();
+         double newPrice = price.doubleValue();
+         display(String.format(this.iBondWindow.getLocale(),
+            "Change %s (%s) price from %s to %s (<span class\\=\"%s\">%+.2f%%</span>) on %tF.",
+            security.getName(), security.getTickerSymbol(),
+            priceFmt.format(oldPrice), priceFmt.format(newPrice),
+            HTMLPane.getSpanCl(price, oldPrice), (newPrice / oldPrice.doubleValue() - 1) * 100,
+            priceRec.date()));
+         addHandler(new SecurityHandler(ssList).storeNewPrice(newPrice, priceDate));
+      }
+
+   } // end storePriceQuoteIfDiff(CurrencyType, PriceRec)
+
+   /**
     * Long-running routine to pull I bond interest rates from a remote
     * site and derive I bond securities prices. Runs on worker thread.
     *
@@ -75,8 +126,13 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    protected Boolean doInBackground() {
       try {
          NavigableMap<LocalDate, IBondRateRec> iBondRates = this.importer.getIBondRates();
-         LocalDate issueDate = IBondImporter.getDateForTicker("ibond202304");
+         CurrencyType security = this.securities.getCurrencyByTickerSymbol("ibond202304");
+         LocalDate issueDate = IBondImporter.getDateForTicker(security.getTickerSymbol());
          List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(issueDate, iBondRates);
+
+         for (PriceRec iBondPrice : iBondPrices) {
+            storePriceQuoteIfDiff(security, iBondPrice);
+         }
 
          return isModified();
       } catch (Throwable e) {
