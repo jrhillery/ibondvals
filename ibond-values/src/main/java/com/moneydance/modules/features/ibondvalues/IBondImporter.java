@@ -218,7 +218,8 @@ public class IBondImporter {
       while (period.isBefore(iBondRates.lastKey().plusMonths(6))) {
          double inflationRate = iBondRates.floorEntry(period).getValue().inflationRate();
          double compositeRate = fixedRate + (2 + fixedRate) * inflationRate;
-         System.out.println("Starting " + period + " composite rate=" + compositeRate);
+         System.err.format("For I bonds issued %tF, starting %tF composite rate=%f%n",
+            issueDate, period, compositeRate);
          addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
 
          BigDecimal semiannualRate = BigDecimal.valueOf(compositeRate / 2);
