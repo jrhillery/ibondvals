@@ -1,0 +1,9 @@
+{
+  "vendor" = "John Hillery"
+  "module_build" = "1"
+  "minbuild" = "1000"
+  "vendor.url" = "http://your.url.here/"
+  "module_name" = "I Bond Values"
+  "module_desc" = "<html><body><title>I Bond Values</title><p>Module used to pull I bond interest rates from a remote site and put I bond securities prices into Moneydance.</p></body></html>"
+  "desc" = "Module used to pull I bond interest rates from TreasuryDirect.gov and put I bond securities prices into Moneydance."
+}
