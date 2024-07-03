@@ -6,7 +6,7 @@ import com.moneydance.apps.md.controller.FeatureModule;
  * Module to pull I bond interest rates from a remote site and derive I bond securities prices.
  */
 @SuppressWarnings("unused")
-public class IBondFeature extends FeatureModule implements AutoCloseable {
+public class Main extends FeatureModule implements AutoCloseable {
    private IBondWindow iBondWindow = null;
    private IBondWorker iBondWorker = null;
 
@@ -93,4 +93,4 @@ public class IBondFeature extends FeatureModule implements AutoCloseable {
 
    } // end close()
 
-} // end class IBondFeature
+} // end class Main
