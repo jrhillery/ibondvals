@@ -11,9 +11,6 @@ http://jakarta.apache.org/ant/index.html
   <property name="importutil" value="${src}/../../mdimport/import-util"/>
   <property name="mdutil" value="${src}/../../mdutil/md-util"/>
   <property name="swingutil" value="${src}/../../mdutil/swing-util"/>
-  <property name="privkeyfile" value="${build}/priv_key"/>
-  <property name="pubkeyfile" value="${build}/pub_key"/>
-  <property name="privkeyid" value="99"/>
 
   <property name="build.compiler.fulldepend" value="true"/>
   <property name="build.sysclasspath" value="ignore" /> <!-- suppress ridiculous "includeantruntime not set" messages from ant -->
@@ -41,37 +38,14 @@ http://jakarta.apache.org/ant/index.html
     	<src path="${importutil}/src/main/java"/>
   	</javac>
 
-    <jar destfile="${build}/ibondvalues.mxt">
+    <jar destfile="${dist}/ibondvalues.mxt">
       <fileset dir="${importutil}/src/main/resources"/>
       <fileset dir="${src}/src/main/resources"/>
       <fileset dir="${build}" includes="com/**"/>
       <zipgroupfileset dir="${poi.library}" includes="*.jar"/>
     </jar>
 
-<!--    <java classname="com.moneydance.admin.KeyAdmin"-->
-<!--      classpathref="classpath"-->
-<!--      inputstring="ibondvalues's passphrase">-->
-<!--      <arg value="signextjar"/>-->
-<!--      <arg value="${privkeyfile}"/>-->
-<!--      <arg value="${privkeyid}"/>-->
-<!--      <arg value="ibondvalues"/>-->
-<!--      <arg line="${build}/ibondvalues.mxt"/>-->
-<!--    </java>-->
-<!--  	<delete file="${build}/ibondvalues.mxt"/>-->
   	<delete dir="${build}/com"/>
-    <move file="ibondvalues.mxt" todir="${dist}"/>
-<!--    <move file="s-ibondvalues.mxt" tofile="${dist}/ibondvalues.mxt"/>-->
-  </target>
-
-  <target name="genkeys">
-    <java 
-      inputstring="ibondvalues's passphrase"
-      classpathref="classpath"
-      classname="com.moneydance.admin.KeyAdmin">
-      <arg value="genkey"/>
-      <arg value="${privkeyfile}"/>
-      <arg value="${pubkeyfile}"/>
-    </java>
   </target>
 
   <target name="all" depends="ibondvalues"/>
