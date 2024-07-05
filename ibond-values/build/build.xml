@@ -6,8 +6,8 @@ http://jakarta.apache.org/ant/index.html
 <project name="ibondvalues" default="all" basedir=".">
   <property name="src" value=".."/>
   <property name="build" value="."/>
-  <property name="moneydance.devkit" value="C:/Users/John/Documents/Prog/moneydance-devkit-5.1"/>
-  <property name="poi.library" value="C:/Users/John/Documents/Prog/poi"/>
+  <property name="moneydance.devkit" value="${user.home}/Documents/Prog/moneydance-devkit-5.1"/>
+  <property name="poi.library" value="${user.home}/Documents/Prog/poi"/>
   <property name="importutil" value="${src}/../../mdimport/import-util"/>
   <property name="mdutil" value="${src}/../../mdutil/md-util"/>
   <property name="swingutil" value="${src}/../../mdutil/swing-util"/>
