@@ -6,7 +6,7 @@ import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.ss.usermodel.WorkbookFactory;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -74,7 +74,7 @@ public class IBondImporter {
       Workbook wb;
 
       try (InputStream iStream = this.iBondRateHistory.toURL().openStream()) {
-         wb = WorkbookFactory.create(iStream);
+         wb = new XSSFWorkbook(iStream);
       } catch (IOException e) {
          throw new MduException(e, "Problem accessing %s", this.iBondRateHistory);
       } // end try-with-resources
