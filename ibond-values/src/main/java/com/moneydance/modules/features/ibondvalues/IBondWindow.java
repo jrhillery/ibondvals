@@ -24,6 +24,7 @@ public class IBondWindow extends JFrame {
       super("I bond values");
       initComponents();
       wireEvents();
+      readIconImage();
 
    } // end constructor
 
@@ -85,6 +86,14 @@ public class IBondWindow extends JFrame {
       }); // end btnCommit.addActionListener
 
    } // end wireEvents()
+
+   /**
+    * Read in and set our icon image.
+   */
+   private void readIconImage() {
+      setIconImage(HTMLPane.readResourceImage("flat-funnel-32.png", getClass()));
+
+   } // end readIconImage()
 
    /**
     * @param text HTML-text to append to the output log text area
