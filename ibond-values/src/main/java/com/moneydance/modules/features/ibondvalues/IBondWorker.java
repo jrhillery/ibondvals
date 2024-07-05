@@ -126,6 +126,10 @@ public class IBondWorker extends SwingWorker<Boolean, String>
             storePriceQuoteIfDiff(security, iBondPrice);
          }
 
+         if (!isModified()) {
+            display("No new price data found.");
+         }
+
          return isModified();
       } catch (Throwable e) {
          display(e.toString());
