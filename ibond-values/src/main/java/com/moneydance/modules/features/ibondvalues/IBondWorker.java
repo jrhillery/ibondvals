@@ -8,11 +8,11 @@ import com.leastlogic.moneydance.util.MdUtil;
 import com.leastlogic.moneydance.util.MduException;
 import com.leastlogic.moneydance.util.SnapshotList;
 import com.leastlogic.moneydance.util.StagedInterface;
-import com.leastlogic.swing.util.HTMLPane;
 import com.moneydance.apps.md.controller.FeatureModuleContext;
 
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -72,9 +72,10 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       for (SecurityHandler sHandler : this.priceChanges) {
          sHandler.applyUpdate();
       }
+      this.priceChanges.clear();
 
       return String.format(this.iBondWindow.getLocale(),
-         "Changed %d security price%s.", numPricesSet, numPricesSet == 1 ? "" : "s");
+         "Set %d security price%s.", numPricesSet, numPricesSet == 1 ? "" : "s");
    } // end commitChanges()
 
    /**
@@ -86,12 +87,21 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end isModified()
 
    /**
-    * @return A currency number format
+    * @param value Reference value
+    * @return A currency number format with the number of fraction digits in value
     */
-   private NumberFormat getCurrencyFormat() {
+   private NumberFormat getCurrencyFormat(BigDecimal value) {
+      DecimalFormat formatter = (DecimalFormat)
+         NumberFormat.getCurrencyInstance(this.iBondWindow.getLocale());
+      int valScale = value.scale();
 
-      return NumberFormat.getCurrencyInstance(this.iBondWindow.getLocale());
-   } // end getCurrencyFormat()
+      if (valScale < 2) {
+         valScale = 2; // some quotes omit the trailing zeros
+      }
+      formatter.setMinimumFractionDigits(valScale);
+
+      return formatter;
+   } // end getCurrencyFormat(BigDecimal)
 
    private void storePriceQuoteIfDiff(CurrencyType security, PriceRec priceRec) {
       BigDecimal price = priceRec.sharePrice();
@@ -104,14 +114,12 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       // store this quote if it differs
       if (snapshot == null || priceDate != snapshot.getDateInt()
             || price.compareTo(oldPrice) != 0) {
-         NumberFormat priceFmt = getCurrencyFormat();
-         double newPrice = price.doubleValue();
+         NumberFormat priceFmt = getCurrencyFormat(price);
          display(String.format(this.iBondWindow.getLocale(),
-            "Change %s (%s) price from %s to %s (<span class\\=\"%s\">%+.2f%%</span>) on %tF.",
+            "Set %s (%s) price to %s for %tF.",
             security.getName(), security.getTickerSymbol(),
-            priceFmt.format(oldPrice), priceFmt.format(newPrice),
-            HTMLPane.getSpanCl(price, oldPrice), (newPrice / oldPrice.doubleValue() - 1) * 100,
-            priceRec.date()));
+            priceFmt.format(price), priceRec.date()));
+         double newPrice = price.doubleValue();
          addHandler(new SecurityHandler(ssList).storeNewPrice(newPrice, priceDate));
       }
 
