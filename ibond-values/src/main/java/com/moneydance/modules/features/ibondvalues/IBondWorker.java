@@ -118,13 +118,24 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    protected Boolean doInBackground() {
       try {
          NavigableMap<LocalDate, IBondRateRec> iBondRates = this.importer.getIBondRates();
-         CurrencyType security = this.securities.getCurrencyByTickerSymbol("ibond202304");
-         LocalDate issueDate = IBondImporter.getDateForTicker(security.getTickerSymbol());
-         List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(issueDate, iBondRates);
+         List<CurrencyType> securityList = this.securities.getAllCurrencies();
+         LocalDate today = LocalDate.now();
 
-         for (PriceRec iBondPrice : iBondPrices) {
-            storePriceQuoteIfDiff(security, iBondPrice);
-         }
+         for (CurrencyType security : securityList) {
+            String ticker = security.getTickerSymbol();
+
+            if (ticker.toLowerCase(this.locale).startsWith("ibond")) {
+               LocalDate issueDate = IBondImporter.getDateForTicker(ticker);
+               List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(issueDate, iBondRates);
+
+               for (PriceRec iBondPrice : iBondPrices) {
+                  // avoid creating future price quotes
+                  if (!iBondPrice.date().isAfter(today)) {
+                     storePriceQuoteIfDiff(security, iBondPrice);
+                  }
+               } // end for each known price
+            }
+         } // end for each security
 
          if (!isModified()) {
             display("No new price data found.");
