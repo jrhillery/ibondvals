@@ -12,11 +12,11 @@ import com.moneydance.apps.md.controller.FeatureModuleContext;
 
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
-import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.NavigableMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
@@ -25,6 +25,7 @@ import java.util.concurrent.ExecutionException;
 public class IBondWorker extends SwingWorker<Boolean, String>
       implements StagedInterface, AutoCloseable {
    private final IBondWindow iBondWindow;
+   private final Locale locale;
    private final String extensionName;
    private final IBondImporter importer;
    private final CurrencyTable securities;
@@ -43,6 +44,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                       FeatureModuleContext fmContext) throws MduException {
       super();
       this.iBondWindow = iBondWindow;
+      this.locale = iBondWindow.getLocale();
       this.extensionName = extensionName;
       this.importer = new IBondImporter();
       this.securities =  fmContext.getCurrentAccountBook().getCurrencies();
@@ -74,7 +76,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       }
       this.priceChanges.clear();
 
-      return String.format(this.iBondWindow.getLocale(),
+      return String.format(this.locale,
          "Set %d security price%s.", numPricesSet, numPricesSet == 1 ? "" : "s");
    } // end commitChanges()
 
@@ -85,23 +87,6 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
       return !this.priceChanges.isEmpty();
    } // end isModified()
-
-   /**
-    * @param value Reference value
-    * @return A currency number format with the number of fraction digits in value
-    */
-   private NumberFormat getCurrencyFormat(BigDecimal value) {
-      DecimalFormat formatter = (DecimalFormat)
-         NumberFormat.getCurrencyInstance(this.iBondWindow.getLocale());
-      int valScale = value.scale();
-
-      if (valScale < 2) {
-         valScale = 2; // some quotes omit the trailing zeros
-      }
-      formatter.setMinimumFractionDigits(valScale);
-
-      return formatter;
-   } // end getCurrencyFormat(BigDecimal)
 
    private void storePriceQuoteIfDiff(CurrencyType security, PriceRec priceRec) {
       BigDecimal price = priceRec.sharePrice();
@@ -114,9 +99,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       // store this quote if it differs
       if (snapshot == null || priceDate != snapshot.getDateInt()
             || price.compareTo(oldPrice) != 0) {
-         NumberFormat priceFmt = getCurrencyFormat(price);
-         display(String.format(this.iBondWindow.getLocale(),
-            "Set %s (%s) price to %s for %tF.",
+         NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, price);
+         display(String.format(this.locale, "Set %s (%s) price to %s for %tF.",
             security.getName(), security.getTickerSymbol(),
             priceFmt.format(price), priceRec.date()));
          double newPrice = price.doubleValue();
@@ -213,7 +197,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     */
    public void close() {
       if (getState() != StateValue.DONE) {
-         System.err.format(this.iBondWindow.getLocale(),
+         System.err.format(this.locale,
             "Cancelling running %s invocation.%n", this.extensionName);
          cancel(false);
 
