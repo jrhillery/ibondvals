@@ -1,5 +1,7 @@
 package com.moneydance.modules.features.ibondvalues;
 
+import com.infinitekind.moneydance.model.Account;
+import com.infinitekind.moneydance.model.AccountBook;
 import com.infinitekind.moneydance.model.CurrencySnapshot;
 import com.infinitekind.moneydance.model.CurrencyTable;
 import com.infinitekind.moneydance.model.CurrencyType;
@@ -22,12 +24,15 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
+import static com.infinitekind.moneydance.model.Account.AccountType.INVESTMENT;
+
 public class IBondWorker extends SwingWorker<Boolean, String>
       implements StagedInterface, AutoCloseable {
    private final IBondWindow iBondWindow;
    private final Locale locale;
    private final String extensionName;
    private final IBondImporter importer;
+   private final AccountBook book;
    private final CurrencyTable securities;
    private final CountDownLatch finishedLatch = new CountDownLatch(1);
 
@@ -47,7 +52,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       this.locale = iBondWindow.getLocale();
       this.extensionName = extensionName;
       this.importer = new IBondImporter();
-      this.securities =  fmContext.getCurrentAccountBook().getCurrencies();
+      this.book = fmContext.getCurrentAccountBook();
+      this.securities = this.book.getCurrencies();
       iBondWindow.setStaged(this);
       iBondWindow.addCloseableResource(this);
 
@@ -77,7 +83,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       this.priceChanges.clear();
 
       return String.format(this.locale,
-         "Set %d security price%s.", numPricesSet, numPricesSet == 1 ? "" : "s");
+         "Recorded %d security price%s.", numPricesSet, numPricesSet == 1 ? "" : "s");
    } // end commitChanges()
 
    /**
@@ -88,6 +94,33 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       return !this.priceChanges.isEmpty();
    } // end isModified()
 
+   /**
+    * Determine if a given security currently has shares in any investment account.
+    *
+    * @param security Moneydance security
+    * @return true when an investment account contains some shares
+    */
+   private boolean haveShares(CurrencyType security) {
+      String securityName = security.getName();
+      List<Account> invAccounts = MdUtil.getAccounts(this.book, INVESTMENT);
+
+      for (Account invAccount : invAccounts) {
+         Account securityAccount = MdUtil.getSubAccountByName(invAccount, securityName);
+
+         if (securityAccount != null && securityAccount.getUserBalance() != 0) {
+            return true;
+         }
+      } // end for each investment account
+
+      return false;
+   } // end haveShares(CurrencyType)
+
+   /**
+    * Store a handler for a deferred price quote if it differs Moneydance data.
+    *
+    * @param security Moneydance security to use
+    * @param priceRec Security price for a specified date
+    */
    private void storePriceQuoteIfDiff(CurrencyType security, PriceRec priceRec) {
       BigDecimal price = priceRec.sharePrice();
       int priceDate = MdUtil.convLocalToDateInt(priceRec.date());
@@ -124,9 +157,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          for (CurrencyType security : securityList) {
             String ticker = security.getTickerSymbol();
 
-            if (ticker.toLowerCase(this.locale).startsWith("ibond")) {
-               LocalDate issueDate = IBondImporter.getDateForTicker(ticker);
-               List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(issueDate, iBondRates);
+            if (ticker.toLowerCase().startsWith("ibond") && haveShares(security)) {
+               List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(
+                     IBondImporter.getDateForTicker(ticker), iBondRates);
 
                for (PriceRec iBondPrice : iBondPrices) {
                   // avoid creating future price quotes
