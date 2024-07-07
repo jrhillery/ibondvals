@@ -8,7 +8,6 @@ http://jakarta.apache.org/ant/index.html
   <property name="build" value="."/>
   <property name="moneydance.devkit" value="${user.home}/Documents/Prog/moneydance-devkit-5.1"/>
   <property name="poi.library" value="${user.home}/Documents/Prog/poi"/>
-  <property name="importutil" value="${src}/../../mdimport/import-util"/>
   <property name="mdutil" value="${src}/../../mdutil/md-util"/>
   <property name="swingutil" value="${src}/../../mdutil/swing-util"/>
 
@@ -35,11 +34,9 @@ http://jakarta.apache.org/ant/index.html
     	<src path="${src}/src/main/java"/>
     	<src path="${mdutil}/src/main/java"/>
     	<src path="${swingutil}/src/main/java"/>
-    	<src path="${importutil}/src/main/java"/>
   	</javac>
 
     <jar destfile="${dist}/ibondvalues.mxt">
-      <fileset dir="${importutil}/src/main/resources"/>
       <fileset dir="${src}/src/main/resources"/>
       <fileset dir="${build}" includes="com/**"/>
       <zipgroupfileset dir="${poi.library}" includes="*.jar"/>
