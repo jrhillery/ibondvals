@@ -11,6 +11,7 @@ import com.leastlogic.moneydance.util.SecurityHandler;
 import com.leastlogic.moneydance.util.SnapshotList;
 import com.leastlogic.moneydance.util.StagedInterface;
 import com.moneydance.apps.md.controller.FeatureModuleContext;
+import com.moneydance.modules.features.ibondvalues.IBondImporter.IBondRateRec;
 
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
