@@ -26,6 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 import static com.infinitekind.moneydance.model.Account.AccountType.INVESTMENT;
+import static com.moneydance.modules.features.ibondvalues.IBondImporter.IBOND_TICKER_PREFIX;
 
 public class IBondWorker extends SwingWorker<Boolean, String>
       implements StagedInterface, AutoCloseable {
@@ -35,6 +36,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    private final IBondImporter importer;
    private final AccountBook book;
    private final CurrencyTable securities;
+   private NavigableMap<LocalDate, IBondRateRec> iBondRates = null;
    private final CountDownLatch finishedLatch = new CountDownLatch(1);
 
    private final List<SecurityHandler> priceChanges = new ArrayList<>();
@@ -59,6 +61,25 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       iBondWindow.addCloseableResource(this);
 
    } // end constructor
+
+   /**
+    * @return Local copy of navigable map containing historical I bond interest rates
+    */
+   private NavigableMap<LocalDate, IBondRateRec> iBondRates() throws MduException {
+      if (this.iBondRates == null) {
+         this.iBondRates = this.importer.getIBondRates();
+      }
+
+      return this.iBondRates;
+   } // end iBondRates()
+
+   /**
+    * @return True when we have a local copy of historical I bond interest rates
+    */
+   private boolean haveIBondRates() {
+
+      return this.iBondRates != null;
+   } // end haveIBondRates()
 
    /**
     * Add a security handler to our collection.
@@ -149,16 +170,16 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     */
    protected Boolean doInBackground() {
       try {
-         NavigableMap<LocalDate, IBondRateRec> iBondRates = this.importer.getIBondRates();
          List<CurrencyType> securityList = this.securities.getAllCurrencies();
          LocalDate today = LocalDate.now();
 
          for (CurrencyType security : securityList) {
             String ticker = security.getTickerSymbol();
 
-            if (ticker.toLowerCase().startsWith("ibond") && haveShares(security)) {
+            if (ticker != null && IBOND_TICKER_PREFIX.regionMatches(true, 0,
+                  ticker, 0, IBOND_TICKER_PREFIX.length()) && haveShares(security)) {
                List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(
-                     IBondImporter.getDateForTicker(ticker), iBondRates);
+                     IBondImporter.getDateForTicker(ticker), iBondRates());
 
                for (PriceRec iBondPrice : iBondPrices) {
                   // avoid creating future price quotes
@@ -169,7 +190,16 @@ public class IBondWorker extends SwingWorker<Boolean, String>
             }
          } // end for each security
 
-         if (!isModified()) {
+         if (!haveIBondRates()) {
+            display("Unable to locate any security with an I bond ticker symbol.",
+               "Such ticker symbols should start with '" + IBOND_TICKER_PREFIX
+                  + "' (in any case) followed by the<br>year followed by a 2 digit "
+                  + "month number in the format " + IBOND_TICKER_PREFIX + "YYYYMM.",
+               "Examples: " + IBOND_TICKER_PREFIX + "201901, "
+                  + IBOND_TICKER_PREFIX.toUpperCase() + "202212, "
+                  + IBOND_TICKER_PREFIX.toLowerCase() + "202304"
+            );
+         } else if (!isModified()) {
             display("No new price data found.");
          }
 
