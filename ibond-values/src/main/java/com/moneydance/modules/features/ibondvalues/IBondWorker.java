@@ -123,16 +123,14 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     * @param priceRec Security price for a specified date
     */
    private void storePriceQuoteIfDiff(CurrencyType security, PriceRec priceRec) {
-      BigDecimal price = priceRec.sharePrice();
+      BigDecimal oldPrice, price = priceRec.sharePrice();
       int priceDate = MdUtil.convLocalToDateInt(priceRec.date());
       SnapshotList ssList = new SnapshotList(security);
-      CurrencySnapshot snapshot = ssList.getSnapshotForDate(priceDate);
-      BigDecimal oldPrice = snapshot == null ? BigDecimal.ONE
-         : MdUtil.convRateToPrice(snapshot.getRate());
+      CurrencySnapshot ss = ssList.getSnapshotForDate(priceDate);
+      oldPrice = ss == null ? BigDecimal.ONE : MdUtil.convRateToPrice(ss.getRate());
 
       // store this quote if it differs
-      if (snapshot == null || priceDate != snapshot.getDateInt()
-            || price.compareTo(oldPrice) != 0) {
+      if (ss == null || priceDate != ss.getDateInt() || price.compareTo(oldPrice) != 0) {
          NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, price);
          display(String.format(this.locale, "Set %s (%s) price to %s for %tF.",
             security.getName(), security.getTickerSymbol(),
@@ -242,7 +240,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
    /**
     * Close this resource, relinquishing any underlying resources.
-    * Cancel this worker, wait for it to complete, discard its results and close odsAcc.
+    * Cancel this worker, wait for it to complete and discard its results.
     */
    public void close() {
       if (getState() != StateValue.DONE) {
