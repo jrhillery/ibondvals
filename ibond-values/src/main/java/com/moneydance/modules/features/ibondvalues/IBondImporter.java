@@ -213,7 +213,7 @@ public class IBondImporter {
          iBondPrice.multiply(monthlyRate).setScale(INTEREST_DIGITS, HALF_EVEN);
       BigDecimal accrual = iBondPrice;
 
-      for (int m = 0; m < 5; ++m) {
+      for (int m = 1; m < SEMIANNUAL_MONTHS; ++m) {
          accrual = accrual.add(monthAccrual);
          month = month.plusMonths(1);
          iBondPrices.add(new PriceRec(accrual, month));
@@ -265,8 +265,8 @@ public class IBondImporter {
          BigDecimal compositeRate =
             fixedRate.add(BigDecimal.TWO).multiply(inflateRate).add(fixedRate);
 
-         System.err.format("For I bonds issued %tF, starting %tF composite rate=%.8f%n",
-            issueDate, period, compositeRate);
+         System.err.format("For I bonds issued %tF, starting %tF composite rate=%s%%%n",
+            issueDate, period, compositeRate.scaleByPowerOfTen(2));
          addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
 
          BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, HALF_EVEN);
@@ -285,7 +285,7 @@ public class IBondImporter {
       try {
          IBondImporter importer = new IBondImporter();
          NavigableMap<LocalDate, IBondRateRec> iBondRates = importer.getIBondRates();
-         LocalDate issueDate = getDateForTicker("ibond202404");
+         LocalDate issueDate = getDateForTicker("ibond202304");
          List<PriceRec> iBondPrices = getIBondPrices(issueDate, iBondRates);
          BigDecimal shares = BigDecimal.valueOf(25);
 
