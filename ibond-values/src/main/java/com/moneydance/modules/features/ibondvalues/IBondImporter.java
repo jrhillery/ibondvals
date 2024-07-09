@@ -33,13 +33,14 @@ public class IBondImporter {
    /** Spreadsheet location */
    private URI iBondRateHistory = null;
    private Properties props = null;
+   public static final String IBOND_TICKER_PREFIX = "IBond";
    private static final String propertiesFileName = "ibond-values.properties";
 
-   public static final int INTEREST_RATE_DIGITS = 4;
-   public static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
-   public static final int INTEREST_DIGITS = 8;
-   public static final int RATE_SET_INTERVAL = 6; // months
-   public static final int SEMIANNUAL_MONTHS = 6;
+   private static final int INTEREST_RATE_DIGITS = 4;
+   private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
+   private static final int INTEREST_DIGITS = 8;
+   private static final int RATE_SET_INTERVAL = 6; // months
+   private static final int SEMIANNUAL_MONTHS = 6;
 
    /**
     * Data record to hold Series I savings bond interest rate history
@@ -190,7 +191,7 @@ public class IBondImporter {
    public static LocalDate getDateForTicker(String tickerSymbol) {
       DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder()
          .parseCaseInsensitive()
-         .appendLiteral("ibond")
+         .appendLiteral(IBOND_TICKER_PREFIX)
          .appendValue(YEAR)
          .appendValue(MONTH_OF_YEAR, 2)
          .parseDefaulting(DAY_OF_MONTH, 1);
@@ -285,7 +286,7 @@ public class IBondImporter {
       try {
          IBondImporter importer = new IBondImporter();
          NavigableMap<LocalDate, IBondRateRec> iBondRates = importer.getIBondRates();
-         LocalDate issueDate = getDateForTicker("ibond202304");
+         LocalDate issueDate = getDateForTicker("IBond201901");
          List<PriceRec> iBondPrices = getIBondPrices(issueDate, iBondRates);
          BigDecimal shares = BigDecimal.valueOf(25);
 
