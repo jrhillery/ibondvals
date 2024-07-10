@@ -179,7 +179,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
             if (ticker != null && IBOND_TICKER_PREFIX.regionMatches(true, 0,
                   ticker, 0, IBOND_TICKER_PREFIX.length()) && haveShares(security)) {
                List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(
-                     IBondImporter.getDateForTicker(ticker), iBondRates());
+                  ticker, iBondRates());
 
                for (PriceRec iBondPrice : iBondPrices) {
                   // avoid creating future price quotes

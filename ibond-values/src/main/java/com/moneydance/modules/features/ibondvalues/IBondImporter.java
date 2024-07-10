@@ -185,10 +185,10 @@ public class IBondImporter {
    /**
     * Determine I bond issue date by parsing the ticker symbol.
     *
-    * @param tickerSymbol Ticker symbol in the format ibondYYYYMM
+    * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
     * @return Date corresponding to the first day of the issue month
     */
-   public static LocalDate getDateForTicker(String tickerSymbol) {
+   private static LocalDate getDateForTicker(String tickerSymbol) {
       DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder()
          .parseCaseInsensitive()
          .appendLiteral(IBOND_TICKER_PREFIX)
@@ -248,13 +248,14 @@ public class IBondImporter {
    /**
     * Make a list of I bond prices for each month for which interest rates are known.
     *
-    * @param issueDate Date I bond was issued
+    * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
     * @param iBondRates Historical I bond interest rates
     * @return List containing I bond prices
     */
    public static List<PriceRec> getIBondPrices(
-         LocalDate issueDate, NavigableMap<LocalDate, IBondRateRec> iBondRates) {
+         String tickerSymbol, NavigableMap<LocalDate, IBondRateRec> iBondRates) {
       ArrayList<PriceRec> iBondPrices = new ArrayList<>();
+      LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate period = issueDate.withDayOfMonth(1);
 
       BigDecimal fixedRate = iBondRates.floorEntry(period).getValue().fixedRate();
@@ -286,8 +287,7 @@ public class IBondImporter {
       try {
          IBondImporter importer = new IBondImporter();
          NavigableMap<LocalDate, IBondRateRec> iBondRates = importer.getIBondRates();
-         LocalDate issueDate = getDateForTicker("IBond201901");
-         List<PriceRec> iBondPrices = getIBondPrices(issueDate, iBondRates);
+         List<PriceRec> iBondPrices = getIBondPrices("IBond201901", iBondRates);
          BigDecimal shares = BigDecimal.valueOf(25);
 
          for (PriceRec iBondPriceRec : iBondPrices) {
