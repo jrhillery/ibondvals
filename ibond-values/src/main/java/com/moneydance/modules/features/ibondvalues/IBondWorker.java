@@ -36,6 +36,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    private final IBondImporter importer;
    private final AccountBook book;
    private final CurrencyTable securities;
+   private final LocalDate today = LocalDate.now();
    private NavigableMap<LocalDate, IBondRateRec> iBondRates = null;
    private final CountDownLatch finishedLatch = new CountDownLatch(1);
 
@@ -156,11 +157,34 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          display(String.format(this.locale, "Set %s (%s) price to %s for %tF.",
             security.getName(), security.getTickerSymbol(),
             priceFmt.format(price), priceRec.date()));
-         double newPrice = price.doubleValue();
-         addHandler(new SecurityHandler(ssList).storeNewPrice(newPrice, priceDate));
+         SecurityHandler sh = new SecurityHandler(ssList);
+         addHandler(sh.storeNewPrice(price.doubleValue(), priceDate));
       }
 
    } // end storePriceQuoteIfDiff(CurrencyType, PriceRec)
+
+   /**
+    * Check if this security has a ticker symbol for I-bonds and if shares exist
+    * in an investment account. If so, store any new prices for this security.
+    *
+    * @param security Moneydance security
+    */
+   private void storeNewIBondPrices(CurrencyType security) throws MduException {
+      String ticker = security.getTickerSymbol();
+
+      if (ticker != null && IBOND_TICKER_PREFIX.regionMatches(true, 0,
+            ticker, 0, IBOND_TICKER_PREFIX.length()) && haveShares(security)) {
+         List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(ticker, iBondRates());
+
+         for (PriceRec iBondPrice : iBondPrices) {
+            // avoid creating future price quotes
+            if (!iBondPrice.date().isAfter(this.today)) {
+               storePriceQuoteIfDiff(security, iBondPrice);
+            }
+         } // end for each known price
+      }
+
+   } // end storeNewIBondPrices(CurrencyType)
 
    /**
     * Long-running routine to pull I bond interest rates from a remote
@@ -171,23 +195,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    protected Boolean doInBackground() {
       try {
          List<CurrencyType> securityList = this.securities.getAllCurrencies();
-         LocalDate today = LocalDate.now();
 
          for (CurrencyType security : securityList) {
-            String ticker = security.getTickerSymbol();
-
-            if (ticker != null && IBOND_TICKER_PREFIX.regionMatches(true, 0,
-                  ticker, 0, IBOND_TICKER_PREFIX.length()) && haveShares(security)) {
-               List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(
-                  ticker, iBondRates());
-
-               for (PriceRec iBondPrice : iBondPrices) {
-                  // avoid creating future price quotes
-                  if (!iBondPrice.date().isAfter(today)) {
-                     storePriceQuoteIfDiff(security, iBondPrice);
-                  }
-               } // end for each known price
-            }
+            storeNewIBondPrices(security);
          } // end for each security
 
          if (!haveIBondRates()) {
@@ -197,8 +207,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                   + "month number in the format " + IBOND_TICKER_PREFIX + "YYYYMM.",
                "Examples: " + IBOND_TICKER_PREFIX + "201901, "
                   + IBOND_TICKER_PREFIX.toUpperCase() + "202212, "
-                  + IBOND_TICKER_PREFIX.toLowerCase() + "202304"
-            );
+                  + IBOND_TICKER_PREFIX.toLowerCase() + "202304");
          } else if (!isModified()) {
             display("No new price data found.");
          }
