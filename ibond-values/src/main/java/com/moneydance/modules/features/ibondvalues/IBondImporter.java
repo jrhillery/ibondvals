@@ -267,6 +267,12 @@ public class IBondImporter {
          BigDecimal compositeRate =
             fixedRate.add(BigDecimal.TWO).multiply(inflateRate).add(fixedRate);
 
+         if (compositeRate.signum() < 0) {
+            compositeRate = BigDecimal.ZERO;
+         }
+         // Round composite rate to the fourth place past the decimal point
+         compositeRate = compositeRate.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
+
          System.err.format("For I bonds issued %tF, starting %tF composite rate=%s%%%n",
             issueDate, period, compositeRate.scaleByPowerOfTen(2));
          addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
