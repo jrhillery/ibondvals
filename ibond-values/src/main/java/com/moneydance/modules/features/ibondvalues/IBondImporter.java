@@ -200,6 +200,36 @@ public class IBondImporter {
    } // end getDateForTicker(String)
 
    /**
+    * Compose the interest rate that will apply for the specified fixed and semiannual
+    * inflation interest rates using the rules for Series I saving bonds. See
+    * <a href="https://www.treasurydirect.gov/savings-bonds/i-bonds/i-bonds-interest-rates">
+    *    TreasuryDirect website</a> for details.
+    *
+    * @param fixedRate Fixed interest rate
+    * @param inflationRate Semiannual inflation interest rate
+    * @param issueDate Date I bond was issued
+    * @param month Initial month's starting date
+    * @return Composite interest rate
+    */
+   private static BigDecimal combineRate(BigDecimal fixedRate, BigDecimal inflationRate,
+                                         LocalDate issueDate, LocalDate month) {
+      BigDecimal compositeRate =
+         fixedRate.add(BigDecimal.TWO).multiply(inflationRate).add(fixedRate);
+
+      if (compositeRate.signum() < 0) {
+         compositeRate = BigDecimal.ZERO;
+      }
+
+      // Round composite rate to the fourth place past the decimal point
+      compositeRate = compositeRate.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
+
+      System.err.format("For I bonds issued %tF, starting %tF composite rate=%s%%%n",
+         issueDate, month, compositeRate.scaleByPowerOfTen(2));
+
+      return compositeRate;
+   } // end composeRate(BigDecimal, BigDecimal, LocalDate, LocalDate)
+
+   /**
     * Add I bond prices for months that do not compound to a specified list.
     *
     * @param iBondPrice Initial I bond price
@@ -264,17 +294,7 @@ public class IBondImporter {
 
       while (period.isBefore(iBondRates.lastKey().plusMonths(RATE_SET_INTERVAL))) {
          BigDecimal inflateRate = iBondRates.floorEntry(period).getValue().inflationRate();
-         BigDecimal compositeRate =
-            fixedRate.add(BigDecimal.TWO).multiply(inflateRate).add(fixedRate);
-
-         if (compositeRate.signum() < 0) {
-            compositeRate = BigDecimal.ZERO;
-         }
-         // Round composite rate to the fourth place past the decimal point
-         compositeRate = compositeRate.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
-
-         System.err.format("For I bonds issued %tF, starting %tF composite rate=%s%%%n",
-            issueDate, period, compositeRate.scaleByPowerOfTen(2));
+         BigDecimal compositeRate = combineRate(fixedRate, inflateRate, issueDate, period);
          addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
 
          BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, HALF_EVEN);
