@@ -33,7 +33,6 @@ public class IBondImporter {
    /** Spreadsheet location */
    private URI iBondRateHistory = null;
    private Properties props = null;
-   public static final String IBOND_TICKER_PREFIX = "IBond";
    private static final String propertiesFileName = "ibond-values.properties";
 
    private static final int INTEREST_RATE_DIGITS = 4;
@@ -191,7 +190,7 @@ public class IBondImporter {
    private static LocalDate getDateForTicker(String tickerSymbol) {
       DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder()
          .parseCaseInsensitive()
-         .appendLiteral(IBOND_TICKER_PREFIX)
+         .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
          .appendValue(YEAR)
          .appendValue(MONTH_OF_YEAR, 2)
          .parseDefaulting(DAY_OF_MONTH, 1);

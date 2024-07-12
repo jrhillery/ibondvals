@@ -26,7 +26,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 
 import static com.infinitekind.moneydance.model.Account.AccountType.INVESTMENT;
-import static com.moneydance.modules.features.ibondvalues.IBondImporter.IBOND_TICKER_PREFIX;
+import static com.leastlogic.moneydance.util.MdUtil.IBOND_TICKER_PREFIX;
 
 public class IBondWorker extends SwingWorker<Boolean, String>
       implements StagedInterface, AutoCloseable {
@@ -164,16 +164,15 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end storePriceQuoteIfDiff(CurrencyType, PriceRec)
 
    /**
-    * Check if this security has a ticker symbol for I-bonds and if shares exist
-    * in an investment account. If so, store any new prices for this security.
+    * Check if this security has a ticker symbol for Series I savings bonds and if shares
+    * exist in an investment account. If so, store any new prices for this security.
     *
     * @param security Moneydance security
     */
    private void storeNewIBondPrices(CurrencyType security) throws MduException {
       String ticker = security.getTickerSymbol();
 
-      if (ticker != null && IBOND_TICKER_PREFIX.regionMatches(true, 0,
-            ticker, 0, IBOND_TICKER_PREFIX.length()) && haveShares(security)) {
+      if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
          List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(ticker, iBondRates());
 
          for (PriceRec iBondPrice : iBondPrices) {
