@@ -39,7 +39,17 @@ http://jakarta.apache.org/ant/index.html
     <jar destfile="${dist}/ibondvalues.mxt">
       <fileset dir="${src}/src/main/resources"/>
       <fileset dir="${build}" includes="com/**"/>
-      <zipgroupfileset dir="${poi.library}" includes="*.jar"/>
+      <zipgroupfileset dir="${poi.library}">
+        <include name="commons-collections4-4.4.jar"/>
+        <include name="commons-compress-1.23.0.jar"/>
+        <include name="commons-io-2.16.1.jar"/>
+        <include name="log4j-api-2.23.1.jar"/>
+        <include name="log4j-core-2.23.1.jar"/>
+        <include name="poi-5.2.5.jar"/>
+        <include name="poi-ooxml-5.2.5.jar"/>
+        <include name="poi-ooxml-lite-5.2.5.jar"/>
+        <include name="xmlbeans-5.2.0.jar"/>
+      </zipgroupfileset>
     </jar>
 
   	<delete dir="${build}/com"/>
