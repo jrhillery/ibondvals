@@ -14,10 +14,12 @@ import java.math.BigDecimal;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Properties;
 import java.util.TreeMap;
@@ -40,6 +42,13 @@ public class IBondImporter {
    private static final int INTEREST_DIGITS = 8;
    private static final int RATE_SET_INTERVAL = 6; // months
    private static final int SEMIANNUAL_MONTHS = 6;
+   private static final DateTimeFormatter TICKER_DATE_FORMATTER =
+      new DateTimeFormatterBuilder()
+         .parseCaseInsensitive()
+         .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
+         .appendValue(YEAR)
+         .appendValue(MONTH_OF_YEAR, 2)
+         .parseDefaulting(DAY_OF_MONTH, 1).toFormatter();
 
    /**
     * Data record to hold Series I savings bond interest rate history
@@ -187,16 +196,35 @@ public class IBondImporter {
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
     * @return Date corresponding to the first day of the issue month
     */
-   private static LocalDate getDateForTicker(String tickerSymbol) {
-      DateTimeFormatterBuilder formatterBuilder = new DateTimeFormatterBuilder()
-         .parseCaseInsensitive()
-         .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
-         .appendValue(YEAR)
-         .appendValue(MONTH_OF_YEAR, 2)
-         .parseDefaulting(DAY_OF_MONTH, 1);
+   private static LocalDate getDateForTicker(String tickerSymbol) throws MduException {
+      try {
 
-      return LocalDate.parse(tickerSymbol, formatterBuilder.toFormatter());
+         return LocalDate.parse(tickerSymbol, TICKER_DATE_FORMATTER);
+      } catch (Exception e) {
+         throw new MduException(e, "Problem parsing date from ticker symbol; %s",
+            e.getLocalizedMessage());
+      }
    } // end getDateForTicker(String)
+
+   /**
+    * Find the Series I savings bond interest rate history data for a given month.
+    *
+    * @param month Initial month's starting date
+    * @param iBondRates Historical I bond interest rates
+    * @param tickerSymbol Ticker symbol
+    * @return Corresponding I bond rate record
+    */
+   private static IBondRateRec getRateForMonth(LocalDate month,
+         NavigableMap<LocalDate, IBondRateRec> iBondRates, String tickerSymbol)
+         throws MduException {
+      Map.Entry<LocalDate, IBondRateRec> fixedRateEntry = iBondRates.floorEntry(month);
+
+      if (fixedRateEntry == null)
+         throw new MduException(null, "No interest rates for I bonds issued %tF (%s)",
+            month, tickerSymbol);
+
+      return fixedRateEntry.getValue();
+   } // end getRateForMonth(LocalDate, NavigableMap<LocalDate, IBondRateRec>, String)
 
    /**
     * Compose the interest rate that will apply for the specified fixed and semiannual
@@ -281,13 +309,13 @@ public class IBondImporter {
     * @param iBondRates Historical I bond interest rates
     * @return List containing I bond prices
     */
-   public static List<PriceRec> getIBondPrices(
-         String tickerSymbol, NavigableMap<LocalDate, IBondRateRec> iBondRates) {
+   public static List<PriceRec> getIBondPrices(String tickerSymbol,
+         NavigableMap<LocalDate, IBondRateRec> iBondRates) throws MduException {
       ArrayList<PriceRec> iBondPrices = new ArrayList<>();
       LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate period = issueDate.withDayOfMonth(1);
 
-      BigDecimal fixedRate = iBondRates.floorEntry(period).getValue().fixedRate();
+      BigDecimal fixedRate = getRateForMonth(period, iBondRates, tickerSymbol).fixedRate();
       BigDecimal iBondPrice = BigDecimal.ONE;
       iBondPrices.add(new PriceRec(iBondPrice, period));
 
@@ -306,7 +334,7 @@ public class IBondImporter {
       loseInterestInFirstYears(issueDate, iBondPrices);
 
       return iBondPrices;
-   } // end getIBondPrices(LocalDate, NavigableMap<LocalDate, IBondRateRec>)
+   } // end getIBondPrices(String, NavigableMap<LocalDate, IBondRateRec>)
 
    public static void main(String[] args) {
       try {
