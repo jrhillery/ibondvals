@@ -173,14 +173,19 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       String ticker = security.getTickerSymbol();
 
       if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
-         List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(ticker, iBondRates());
+         NavigableMap<LocalDate, IBondRateRec> iBondRates = iBondRates();
+         try {
+            List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(ticker, iBondRates);
 
-         for (PriceRec iBondPrice : iBondPrices) {
-            // avoid creating future price quotes
-            if (!iBondPrice.date().isAfter(this.today)) {
-               storePriceQuoteIfDiff(security, iBondPrice);
-            }
-         } // end for each known price
+            for (PriceRec iBondPrice : iBondPrices) {
+               // avoid creating future price quotes
+               if (!iBondPrice.date().isAfter(this.today)) {
+                  storePriceQuoteIfDiff(security, iBondPrice);
+               }
+            } // end for each known price
+         } catch (MduException e) {
+            display(e.getLocalizedMessage());
+         }
       }
 
    } // end storeNewIBondPrices(CurrencyType)
