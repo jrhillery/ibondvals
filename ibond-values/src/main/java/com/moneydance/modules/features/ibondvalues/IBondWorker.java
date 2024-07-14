@@ -64,14 +64,11 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end constructor
 
    /**
-    * @return Local copy of navigable map containing historical I bond interest rates
+    * Load a local copy of navigable map containing historical I bond interest rates
     */
-   private NavigableMap<LocalDate, IBondRateRec> iBondRates() throws MduException {
-      if (this.iBondRates == null) {
-         this.iBondRates = this.importer.getIBondRates();
-      }
+   private void iBondRates() throws MduException {
+      this.iBondRates = this.importer.getIBondRates();
 
-      return this.iBondRates;
    } // end iBondRates()
 
    /**
@@ -173,9 +170,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       String ticker = security.getTickerSymbol();
 
       if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
-         NavigableMap<LocalDate, IBondRateRec> iBondRates = iBondRates();
+         iBondRates(); // don't catch any exceptions here
          try {
-            List<PriceRec> iBondPrices = IBondImporter.getIBondPrices(ticker, iBondRates);
+            List<PriceRec> iBondPrices = this.importer.getIBondPrices(ticker);
 
             for (PriceRec iBondPrice : iBondPrices) {
                // avoid creating future price quotes

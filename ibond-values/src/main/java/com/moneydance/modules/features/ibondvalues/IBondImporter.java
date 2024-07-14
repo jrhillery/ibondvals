@@ -210,21 +210,19 @@ public class IBondImporter {
     * Find the Series I savings bond interest rate history data for a given month.
     *
     * @param month Initial month's starting date
-    * @param iBondRates Historical I bond interest rates
     * @param tickerSymbol Ticker symbol
     * @return Corresponding I bond rate record
     */
-   private static IBondRateRec getRateForMonth(LocalDate month,
-         NavigableMap<LocalDate, IBondRateRec> iBondRates, String tickerSymbol)
+   private IBondRateRec getRateForMonth(LocalDate month, String tickerSymbol)
          throws MduException {
-      Map.Entry<LocalDate, IBondRateRec> fixedRateEntry = iBondRates.floorEntry(month);
+      Map.Entry<LocalDate, IBondRateRec> fixedRateEntry = getIBondRates().floorEntry(month);
 
       if (fixedRateEntry == null)
          throw new MduException(null, "No interest rates for I bonds issued %tF (%s)",
             month, tickerSymbol);
 
       return fixedRateEntry.getValue();
-   } // end getRateForMonth(LocalDate, NavigableMap<LocalDate, IBondRateRec>, String)
+   } // end getRateForMonth(LocalDate, String)
 
    /**
     * Compose the interest rate that will apply for the specified fixed and semiannual
@@ -306,21 +304,19 @@ public class IBondImporter {
     * Make a list of I bond prices for each month for which interest rates are known.
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
-    * @param iBondRates Historical I bond interest rates
     * @return List containing I bond prices
     */
-   public static List<PriceRec> getIBondPrices(String tickerSymbol,
-         NavigableMap<LocalDate, IBondRateRec> iBondRates) throws MduException {
+   public List<PriceRec> getIBondPrices(String tickerSymbol) throws MduException {
       ArrayList<PriceRec> iBondPrices = new ArrayList<>();
       LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate period = issueDate.withDayOfMonth(1);
 
-      BigDecimal fixedRate = getRateForMonth(period, iBondRates, tickerSymbol).fixedRate();
+      BigDecimal fixedRate = getRateForMonth(period, tickerSymbol).fixedRate();
       BigDecimal iBondPrice = BigDecimal.ONE;
       iBondPrices.add(new PriceRec(iBondPrice, period));
 
-      while (period.isBefore(iBondRates.lastKey().plusMonths(RATE_SET_INTERVAL))) {
-         BigDecimal inflateRate = iBondRates.floorEntry(period).getValue().inflationRate();
+      while (period.isBefore(getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL))) {
+         BigDecimal inflateRate = getRateForMonth(period, tickerSymbol).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate, issueDate, period);
          addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
 
@@ -334,13 +330,12 @@ public class IBondImporter {
       loseInterestInFirstYears(issueDate, iBondPrices);
 
       return iBondPrices;
-   } // end getIBondPrices(String, NavigableMap<LocalDate, IBondRateRec>)
+   } // end getIBondPrices(String)
 
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         NavigableMap<LocalDate, IBondRateRec> iBondRates = importer.getIBondRates();
-         List<PriceRec> iBondPrices = getIBondPrices("IBond201901", iBondRates);
+         List<PriceRec> iBondPrices = importer.getIBondPrices("IBond201901");
          BigDecimal shares = BigDecimal.valueOf(25);
 
          for (PriceRec iBondPriceRec : iBondPrices) {
