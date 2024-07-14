@@ -300,8 +300,11 @@ public class IBondImporter {
             priceRec.sharePrice(iBondPrices.get(i - 3).sharePrice());
          }
       }
-      iBondPrices.get(2).sharePrice(iBondPrices.get(0).sharePrice());
-      iBondPrices.get(1).sharePrice(iBondPrices.get(0).sharePrice());
+
+      if (iBondPrices.size() > 2) {
+         iBondPrices.get(2).sharePrice(iBondPrices.get(0).sharePrice());
+         iBondPrices.get(1).sharePrice(iBondPrices.get(0).sharePrice());
+      }
 
    } // end loseInterestInFirstYears(LocalDate, List<PriceRec>)
 
