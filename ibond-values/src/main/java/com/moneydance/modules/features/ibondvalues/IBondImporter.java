@@ -35,6 +35,7 @@ public class IBondImporter {
    /** Spreadsheet location */
    private URI iBondRateHistory = null;
    private Properties props = null;
+   private NavigableMap<LocalDate, IBondRateRec> iBondRates = null;
    private static final String propertiesFileName = "ibond-values.properties";
 
    private static final int INTEREST_RATE_DIGITS = 4;
@@ -139,25 +140,29 @@ public class IBondImporter {
     * @return Navigable map containing historical I bond interest rates
     */
    public NavigableMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
-      Iterator<Row> dataRowItr = getDataRowIterator();
-      Row row = dataRowItr.next();
-      int iRateCol = -1, fRateCol = -1, sDateCol = -1;
+      if (this.iBondRates == null) {
+         Iterator<Row> dataRowItr = getDataRowIterator();
+         Row row = dataRowItr.next();
+         int iRateCol = -1, fRateCol = -1, sDateCol = -1;
 
-      for (Cell cell : row) {
-         if (cell.getCellType() == STRING) {
-            switch (IBondHistColHdr.getEnum(cell.getStringCellValue())) {
-               case iRate: iRateCol = cell.getColumnIndex(); break;
-               case fRate: fRateCol = cell.getColumnIndex(); break;
-               case sDate: sDateCol = cell.getColumnIndex(); break;
+         for (Cell cell : row) {
+            if (cell.getCellType() == STRING) {
+               switch (IBondHistColHdr.getEnum(cell.getStringCellValue())) {
+                  case iRate: iRateCol = cell.getColumnIndex(); break;
+                  case fRate: fRateCol = cell.getColumnIndex(); break;
+                  case sDate: sDateCol = cell.getColumnIndex(); break;
+               }
             }
-         }
-      } // end for each cell
+         } // end for each cell
 
-      if (iRateCol < 0 || fRateCol < 0 || sDateCol < 0)
-         throw new MduException(null, "Unable to locate column headers %s in %s",
-            IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
+         if (iRateCol < 0 || fRateCol < 0 || sDateCol < 0)
+            throw new MduException(null, "Unable to locate column headers %s in %s",
+               IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
 
-      return getIBondRates(dataRowItr, iRateCol, fRateCol, sDateCol);
+         this.iBondRates = getIBondRates(dataRowItr, iRateCol, fRateCol, sDateCol);
+      }
+
+      return this.iBondRates;
    } // end getIBondRates()
 
    /**
