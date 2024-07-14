@@ -162,9 +162,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                // avoid creating future price quotes
                if (!iBondPrice.date().isAfter(this.today)) {
                   storePriceQuoteIfDiff(security, iBondPrice);
+                  this.haveIBondSecurities = true;
                }
             } // end for each known price
-            this.haveIBondSecurities = true;
          } catch (MduException e) {
             display(e.getLocalizedMessage());
          }
