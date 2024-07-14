@@ -11,7 +11,6 @@ import com.leastlogic.moneydance.util.SecurityHandler;
 import com.leastlogic.moneydance.util.SnapshotList;
 import com.leastlogic.moneydance.util.StagedInterface;
 import com.moneydance.apps.md.controller.FeatureModuleContext;
-import com.moneydance.modules.features.ibondvalues.IBondImporter.IBondRateRec;
 
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
@@ -20,7 +19,6 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
-import java.util.NavigableMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -37,7 +35,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    private final AccountBook book;
    private final CurrencyTable securities;
    private final LocalDate today = LocalDate.now();
-   private NavigableMap<LocalDate, IBondRateRec> iBondRates = null;
+   private boolean haveIBondSecurities = false;
    private final CountDownLatch finishedLatch = new CountDownLatch(1);
 
    private final List<SecurityHandler> priceChanges = new ArrayList<>();
@@ -62,22 +60,6 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       iBondWindow.addCloseableResource(this);
 
    } // end constructor
-
-   /**
-    * Load a local copy of navigable map containing historical I bond interest rates
-    */
-   private void iBondRates() throws MduException {
-      this.iBondRates = this.importer.getIBondRates();
-
-   } // end iBondRates()
-
-   /**
-    * @return True when we have a local copy of historical I bond interest rates
-    */
-   private boolean haveIBondRates() {
-
-      return this.iBondRates != null;
-   } // end haveIBondRates()
 
    /**
     * Add a security handler to our collection.
@@ -170,7 +152,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       String ticker = security.getTickerSymbol();
 
       if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
-         iBondRates(); // don't catch any exceptions here
+         // don't catch exceptions here
+         this.importer.getIBondRates();
+
          try {
             List<PriceRec> iBondPrices = this.importer.getIBondPrices(ticker);
 
@@ -180,6 +164,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                   storePriceQuoteIfDiff(security, iBondPrice);
                }
             } // end for each known price
+            this.haveIBondSecurities = true;
          } catch (MduException e) {
             display(e.getLocalizedMessage());
          }
@@ -201,7 +186,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
             storeNewIBondPrices(security);
          } // end for each security
 
-         if (!haveIBondRates()) {
+         if (!this.haveIBondSecurities) {
             display("Unable to locate any security with an I bond ticker symbol.",
                "Such ticker symbols should start with '" + IBOND_TICKER_PREFIX
                   + "' (in any case) followed by the<br>year followed by a 2 digit "
