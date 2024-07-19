@@ -8,11 +8,9 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -100,14 +98,14 @@ public class IBondImporter {
       String uriStr = getProperty("url.treasurydirect");
       try {
          this.iBondRateHistory = new URI(uriStr);
-      } catch (URISyntaxException e) {
+      } catch (Exception e) {
          throw new MduException(e, "Problem parsing URL [%s]", uriStr);
       }
       Workbook wb;
 
       try (InputStream iStream = this.iBondRateHistory.toURL().openStream()) {
          wb = new XSSFWorkbook(iStream);
-      } catch (IOException e) {
+      } catch (Exception e) {
          throw new MduException(e, "Problem accessing %s", this.iBondRateHistory);
       } // end try-with-resources
 
