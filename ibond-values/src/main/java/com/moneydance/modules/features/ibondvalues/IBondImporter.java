@@ -176,8 +176,7 @@ public class IBondImporter {
          Iterator<Row> dataRowItr, int iRateCol, int fRateCol, int sDateCol) {
       TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
 
-      while (dataRowItr.hasNext()) {
-         Row row = dataRowItr.next();
+      dataRowItr.forEachRemaining(row -> {
          Cell iRateCell = row.getCell(iRateCol);
          Cell fRateCell = row.getCell(fRateCol);
          Cell sDateCell = row.getCell(sDateCol);
@@ -188,7 +187,7 @@ public class IBondImporter {
             LocalDate startDate = sDateCell.asDate().toLocalDate();
             iBondRates.put(startDate, new IBondRateRec(inflateRate, fixedRate, startDate));
          }
-      } // end while more rows
+      }); // end for each remaining row
 
       return iBondRates;
    } // end getIBondRates(Iterator<Row>, int, int, int)
