@@ -2,11 +2,10 @@ package com.moneydance.modules.features.ibondvalues;
 
 import com.leastlogic.moneydance.util.MdUtil;
 import com.leastlogic.moneydance.util.MduException;
-import org.apache.poi.ss.usermodel.Cell;
-import org.apache.poi.ss.usermodel.Row;
-import org.apache.poi.ss.usermodel.Sheet;
-import org.apache.poi.ss.usermodel.Workbook;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.dhatim.fastexcel.reader.Cell;
+import org.dhatim.fastexcel.reader.ReadableWorkbook;
+import org.dhatim.fastexcel.reader.Row;
+import org.dhatim.fastexcel.reader.Sheet;
 
 import java.io.InputStream;
 import java.math.BigDecimal;
@@ -19,15 +18,16 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.Optional;
 import java.util.Properties;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 
 import static java.math.RoundingMode.HALF_EVEN;
 import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.YEAR;
-import static org.apache.poi.ss.usermodel.CellType.STRING;
-import static org.apache.poi.ss.usermodel.Row.MissingCellPolicy.RETURN_BLANK_AS_NULL;
+import static org.dhatim.fastexcel.reader.CellType.STRING;
 
 public class IBondImporter {
    /** Spreadsheet location */
@@ -101,22 +101,29 @@ public class IBondImporter {
       } catch (Exception e) {
          throw new MduException(e, "Problem parsing URL [%s]", uriStr);
       }
-      Workbook wb;
+      ReadableWorkbook wb;
 
       try (InputStream iStream = this.iBondRateHistory.toURL().openStream()) {
-         wb = new XSSFWorkbook(iStream);
+         wb = new ReadableWorkbook(iStream);
       } catch (Exception e) {
          throw new MduException(e, "Problem accessing %s", this.iBondRateHistory);
       } // end try-with-resources
 
       String dataSheetName = getProperty("sheet.data");
-      Sheet dataSheet = wb.getSheet(dataSheetName);
+      Optional<Sheet> dataSheet = wb.findSheet(dataSheetName);
 
-      if (dataSheet == null)
+      if (dataSheet.isEmpty())
          throw new MduException(null, "Unable to find sheet %s in %s",
             dataSheetName, this.iBondRateHistory);
+      Stream<Row> rowStream;
 
-      return dataSheet.rowIterator();
+      try {
+         rowStream = dataSheet.get().openStream();
+      } catch (Exception e) {
+         throw new MduException(e, "Problem accessing rows in %s", this.iBondRateHistory);
+      }
+
+      return rowStream.iterator();
    } // end getDataRowIterator()
 
    /**
@@ -127,7 +134,7 @@ public class IBondImporter {
     * @return BigDecimal value rounded to the fourth place past the decimal point
     */
    private static BigDecimal getNumericClean(Cell cell) {
-      BigDecimal bd = BigDecimal.valueOf(cell.getNumericCellValue());
+      BigDecimal bd = cell.asNumber();
 
       return bd.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
    } // end getNumericClean(Cell)
@@ -144,8 +151,8 @@ public class IBondImporter {
          int iRateCol = -1, fRateCol = -1, sDateCol = -1;
 
          for (Cell cell : row) {
-            if (cell.getCellType() == STRING) {
-               switch (IBondHistColHdr.getEnum(cell.getStringCellValue())) {
+            if (cell.getType() == STRING) {
+               switch (IBondHistColHdr.getEnum(cell.asString())) {
                   case iRate: iRateCol = cell.getColumnIndex(); break;
                   case fRate: fRateCol = cell.getColumnIndex(); break;
                   case sDate: sDateCol = cell.getColumnIndex(); break;
@@ -178,14 +185,14 @@ public class IBondImporter {
 
       while (dataRowItr.hasNext()) {
          Row row = dataRowItr.next();
-         Cell iRateCell = row.getCell(iRateCol, RETURN_BLANK_AS_NULL);
-         Cell fRateCell = row.getCell(fRateCol, RETURN_BLANK_AS_NULL);
-         Cell sDateCell = row.getCell(sDateCol, RETURN_BLANK_AS_NULL);
+         Cell iRateCell = row.getCell(iRateCol);
+         Cell fRateCell = row.getCell(fRateCol);
+         Cell sDateCell = row.getCell(sDateCol);
 
          if (iRateCell != null && fRateCell != null && sDateCell != null) {
             BigDecimal inflateRate = getNumericClean(iRateCell);
             BigDecimal fixedRate = getNumericClean(fRateCell);
-            LocalDate startDate = sDateCell.getLocalDateTimeCellValue().toLocalDate();
+            LocalDate startDate = sDateCell.asDate().toLocalDate();
             iBondRates.put(startDate, new IBondRateRec(inflateRate, fixedRate, startDate));
          }
       } // end while more rows
