@@ -18,7 +18,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
-import java.util.Optional;
 import java.util.Properties;
 import java.util.TreeMap;
 import java.util.stream.Stream;
@@ -110,15 +109,13 @@ public class IBondImporter {
       } // end try-with-resources
 
       String dataSheetName = getProperty("sheet.data");
-      Optional<Sheet> dataSheet = wb.findSheet(dataSheetName);
-
-      if (dataSheet.isEmpty())
-         throw new MduException(null, "Unable to find sheet %s in %s",
-            dataSheetName, this.iBondRateHistory);
+      Sheet dataSheet = wb.findSheet(dataSheetName).orElseThrow(
+         () -> new MduException(null, "Unable to find sheet %s in %s",
+            dataSheetName, this.iBondRateHistory));
       Stream<Row> rowStream;
 
       try {
-         rowStream = dataSheet.get().openStream();
+         rowStream = dataSheet.openStream();
       } catch (Exception e) {
          throw new MduException(e, "Problem accessing rows in %s", this.iBondRateHistory);
       }
