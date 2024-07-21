@@ -20,7 +20,6 @@ import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Properties;
 import java.util.TreeMap;
-import java.util.stream.Stream;
 
 import static java.math.RoundingMode.HALF_EVEN;
 import static java.time.temporal.ChronoField.DAY_OF_MONTH;
@@ -112,15 +111,12 @@ public class IBondImporter {
       Sheet dataSheet = wb.findSheet(dataSheetName).orElseThrow(
          () -> new MduException(null, "Unable to find sheet %s in %s",
             dataSheetName, this.iBondRateHistory));
-      Stream<Row> rowStream;
 
       try {
-         rowStream = dataSheet.openStream();
+         return dataSheet.openStream().iterator();
       } catch (Exception e) {
          throw new MduException(e, "Problem accessing rows in %s", this.iBondRateHistory);
       }
-
-      return rowStream.iterator();
    } // end getDataRowIterator()
 
    /**
