@@ -15,11 +15,11 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Properties;
+import java.util.Spliterator;
 import java.util.TreeMap;
 
 import static java.math.RoundingMode.HALF_EVEN;
@@ -97,12 +97,12 @@ public class IBondImporter {
    } // end getProperty(String)
 
    /**
-    * Retrieve a row iterator over the data sheet of
+    * Retrieve a row spliterator over the data sheet of
     * a spreadsheet on the TreasuryDirect website.
     *
-    * @return Row iterator over data sheet
+    * @return Row spliterator over data sheet
     */
-   private Iterator<Row> getDataRowIterator() throws MduException {
+   private Spliterator<Row> getDataRowIterator() throws MduException {
       String uriStr = getProperty("url.treasurydirect");
       try {
          this.iBondRateHistory = new URI(uriStr);
@@ -123,7 +123,7 @@ public class IBondImporter {
             dataSheetName, this.iBondRateHistory));
 
       try {
-         return dataSheet.openStream().iterator();
+         return dataSheet.openStream().spliterator();
       } catch (Exception e) {
          throw new MduException(e, "Problem accessing rows in %s", this.iBondRateHistory);
       }
@@ -149,18 +149,18 @@ public class IBondImporter {
     */
    public NavigableMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
       if (this.iBondRates == null) {
-         Iterator<Row> dataRowItr = getDataRowIterator();
-         Row row = dataRowItr.next();
-
-         for (Cell cell : row) {
-            if (cell.getType() == STRING) {
-               switch (IBondHistColHdr.getEnum(cell.asString())) {
-                  case iRate: this.iRateCol = cell.getColumnIndex(); break;
-                  case fRate: this.fRateCol = cell.getColumnIndex(); break;
-                  case sDate: this.sDateCol = cell.getColumnIndex(); break;
+         Spliterator<Row> dataRowItr = getDataRowIterator();
+         dataRowItr.tryAdvance(row -> {
+            for (Cell cell : row) {
+               if (cell.getType() == STRING) {
+                  switch (IBondHistColHdr.getEnum(cell.asString())) {
+                     case iRate: this.iRateCol = cell.getColumnIndex(); break;
+                     case fRate: this.fRateCol = cell.getColumnIndex(); break;
+                     case sDate: this.sDateCol = cell.getColumnIndex(); break;
+                  }
                }
-            }
-         } // end for each cell
+            } // end for each cell
+         });
 
          if (this.iRateCol < 0 || this.fRateCol < 0 || this.sDateCol < 0)
             throw new MduException(null, "Unable to locate column headers %s in %s",
@@ -175,10 +175,10 @@ public class IBondImporter {
    /**
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
     *
-    * @param dataRowItr Row iterator over the data sheet portion of the spreadsheet to use
+    * @param dataRowItr Row spliterator over the data sheet portion of the spreadsheet to use
     * @return Navigable map containing historical I bond interest rates
     */
-   private NavigableMap<LocalDate, IBondRateRec> getIBondRates(Iterator<Row> dataRowItr) {
+   private NavigableMap<LocalDate, IBondRateRec> getIBondRates(Spliterator<Row> dataRowItr) {
       TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
 
       dataRowItr.forEachRemaining(row -> {
@@ -195,7 +195,7 @@ public class IBondImporter {
       }); // end for each remaining row
 
       return iBondRates;
-   } // end getIBondRates(Iterator<Row>)
+   } // end getIBondRates(Spliterator<Row>)
 
    /**
     * Get the cell at the specified column index with the desired type, otherwise null.
