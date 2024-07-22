@@ -34,13 +34,13 @@ public class IBondImporter {
    /** Spreadsheet location */
    private URI iBondRateHistory = null;
    private Properties props = null;
-   /** Navigable map containing historical I bond interest rates **/
+   /** Navigable map containing historical I bond interest rates */
    private NavigableMap<LocalDate, IBondRateRec> iBondRates = null;
-   /** Column index of semiannual inflation interest rates **/
+   /** Column index of semiannual inflation interest rates */
    private int iRateCol = -1;
-   /** Column index of fixed interest rates **/
+   /** Column index of fixed interest rates */
    private int fRateCol = -1;
-   /** Column index of dates rates take effect **/
+   /** Column index of dates rates take effect */
    private int sDateCol = -1;
    private static final String propertiesFileName = "ibond-values.properties";
 
@@ -97,8 +97,8 @@ public class IBondImporter {
    } // end getProperty(String)
 
    /**
-    * Retrieve a row spliterator over the data sheet of
-    * a spreadsheet on the TreasuryDirect website.
+    * Retrieve a row spliterator over the data sheet
+    * of a spreadsheet on the TreasuryDirect website.
     *
     * @return Row spliterator over data sheet
     */
