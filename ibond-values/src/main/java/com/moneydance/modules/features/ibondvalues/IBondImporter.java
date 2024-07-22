@@ -34,7 +34,14 @@ public class IBondImporter {
    /** Spreadsheet location */
    private URI iBondRateHistory = null;
    private Properties props = null;
+   /** Navigable map containing historical I bond interest rates **/
    private NavigableMap<LocalDate, IBondRateRec> iBondRates = null;
+   /** Column index of semiannual inflation interest rates **/
+   private int iRateCol = -1;
+   /** Column index of fixed interest rates **/
+   private int fRateCol = -1;
+   /** Column index of dates rates take effect **/
+   private int sDateCol = -1;
    private static final String propertiesFileName = "ibond-values.properties";
 
    private static final int INTEREST_RATE_DIGITS = 4;
@@ -144,23 +151,22 @@ public class IBondImporter {
       if (this.iBondRates == null) {
          Iterator<Row> dataRowItr = getDataRowIterator();
          Row row = dataRowItr.next();
-         int iRateCol = -1, fRateCol = -1, sDateCol = -1;
 
          for (Cell cell : row) {
             if (cell.getType() == STRING) {
                switch (IBondHistColHdr.getEnum(cell.asString())) {
-                  case iRate: iRateCol = cell.getColumnIndex(); break;
-                  case fRate: fRateCol = cell.getColumnIndex(); break;
-                  case sDate: sDateCol = cell.getColumnIndex(); break;
+                  case iRate: this.iRateCol = cell.getColumnIndex(); break;
+                  case fRate: this.fRateCol = cell.getColumnIndex(); break;
+                  case sDate: this.sDateCol = cell.getColumnIndex(); break;
                }
             }
          } // end for each cell
 
-         if (iRateCol < 0 || fRateCol < 0 || sDateCol < 0)
+         if (this.iRateCol < 0 || this.fRateCol < 0 || this.sDateCol < 0)
             throw new MduException(null, "Unable to locate column headers %s in %s",
                IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
 
-         this.iBondRates = getIBondRates(dataRowItr, iRateCol, fRateCol, sDateCol);
+         this.iBondRates = getIBondRates(dataRowItr);
       }
 
       return this.iBondRates;
@@ -170,19 +176,15 @@ public class IBondImporter {
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
     *
     * @param dataRowItr Row iterator over the data sheet portion of the spreadsheet to use
-    * @param iRateCol Column index of semiannual inflation interest rates
-    * @param fRateCol Column index of fixed interest rates
-    * @param sDateCol Column index of dates rates take effect
     * @return Navigable map containing historical I bond interest rates
     */
-   private static NavigableMap<LocalDate, IBondRateRec> getIBondRates(
-         Iterator<Row> dataRowItr, int iRateCol, int fRateCol, int sDateCol) {
+   private NavigableMap<LocalDate, IBondRateRec> getIBondRates(Iterator<Row> dataRowItr) {
       TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
 
       dataRowItr.forEachRemaining(row -> {
-         Cell iRateCell = getCellOfType(iRateCol, NUMBER, row);
-         Cell fRateCell = getCellOfType(fRateCol, NUMBER, row);
-         Cell sDateCell = getCellOfType(sDateCol, FORMULA, row);
+         Cell iRateCell = getCellOfType(this.iRateCol, NUMBER, row);
+         Cell fRateCell = getCellOfType(this.fRateCol, NUMBER, row);
+         Cell sDateCell = getCellOfType(this.sDateCol, FORMULA, row);
 
          if (iRateCell != null && fRateCell != null && sDateCell != null) {
             BigDecimal inflateRate = getNumericClean(iRateCell);
@@ -193,7 +195,7 @@ public class IBondImporter {
       }); // end for each remaining row
 
       return iBondRates;
-   } // end getIBondRates(Iterator<Row>, int, int, int)
+   } // end getIBondRates(Iterator<Row>)
 
    /**
     * Get the cell at the specified column index with the desired type, otherwise null.
