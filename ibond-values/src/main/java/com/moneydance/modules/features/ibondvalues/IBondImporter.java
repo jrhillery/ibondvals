@@ -3,6 +3,7 @@ package com.moneydance.modules.features.ibondvalues;
 import com.leastlogic.moneydance.util.MdUtil;
 import com.leastlogic.moneydance.util.MduException;
 import org.dhatim.fastexcel.reader.Cell;
+import org.dhatim.fastexcel.reader.CellType;
 import org.dhatim.fastexcel.reader.ReadableWorkbook;
 import org.dhatim.fastexcel.reader.Row;
 import org.dhatim.fastexcel.reader.Sheet;
@@ -25,6 +26,8 @@ import static java.math.RoundingMode.HALF_EVEN;
 import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.YEAR;
+import static org.dhatim.fastexcel.reader.CellType.FORMULA;
+import static org.dhatim.fastexcel.reader.CellType.NUMBER;
 import static org.dhatim.fastexcel.reader.CellType.STRING;
 
 public class IBondImporter {
@@ -177,9 +180,9 @@ public class IBondImporter {
       TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
 
       dataRowItr.forEachRemaining(row -> {
-         Cell iRateCell = row.getCell(iRateCol);
-         Cell fRateCell = row.getCell(fRateCol);
-         Cell sDateCell = row.getCell(sDateCol);
+         Cell iRateCell = getCellOfType(iRateCol, NUMBER, row);
+         Cell fRateCell = getCellOfType(fRateCol, NUMBER, row);
+         Cell sDateCell = getCellOfType(sDateCol, FORMULA, row);
 
          if (iRateCell != null && fRateCell != null && sDateCell != null) {
             BigDecimal inflateRate = getNumericClean(iRateCell);
@@ -191,6 +194,24 @@ public class IBondImporter {
 
       return iBondRates;
    } // end getIBondRates(Iterator<Row>, int, int, int)
+
+   /**
+    * Get the cell at the specified column index with the desired type, otherwise null.
+    *
+    * @param colIndex column index to get
+    * @param desiredType desired type of cell
+    * @param row row containing cell
+    * @return cell with the desired type, otherwise null
+    */
+   private static Cell getCellOfType(int colIndex, CellType desiredType, Row row) {
+      Cell cell = row.getCell(colIndex);
+
+      if (cell != null && cell.getType() != desiredType) {
+         cell = null;
+      }
+
+      return cell;
+   } // end getCellOfType(int, CellType, Row)
 
    /**
     * Determine I bond issue date by parsing the ticker symbol.
