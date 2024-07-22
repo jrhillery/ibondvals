@@ -21,6 +21,7 @@ public enum IBondHistColHdr {
 
    /**
     * Initialize the column header enum value map.
+    *
     * @param iRateName Header name for semiannual inflation interest rates
     * @param fRateName Header name for fixed interest rates
     * @param sDateName Header name for dates rates take effect
@@ -35,20 +36,18 @@ public enum IBondHistColHdr {
 
    /**
     * Retrieve the enum for the supplied column header name text.
+    *
     * @param value Column header text
     * @return Corresponding enum
     */
    public static IBondHistColHdr getEnum(String value) {
-      IBondHistColHdr colHdr = valMap.get(value);
 
-      if (colHdr == null)
-         return other;
-      else
-         return colHdr;
+      return valMap.getOrDefault(value, other);
    } // end getEnum(String)
 
    /**
     * Retrieve the column headers names we are using.
+    *
     * @return Set of column headers names
     */
    public static Set<String> getColumnHeaders() {
