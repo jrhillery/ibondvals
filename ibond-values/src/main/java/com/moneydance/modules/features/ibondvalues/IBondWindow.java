@@ -91,7 +91,7 @@ public class IBondWindow extends JFrame {
     * Read in and set our icon image.
    */
    private void readIconImage() {
-      setIconImage(HTMLPane.readResourceImage("flat-funnel-32.png", getClass()));
+      setIconImage(HTMLPane.readResourceImage("eyes_icon.png", getClass()));
 
    } // end readIconImage()
 
