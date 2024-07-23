@@ -6,6 +6,7 @@ import com.infinitekind.moneydance.model.CurrencySnapshot;
 import com.infinitekind.moneydance.model.CurrencyTable;
 import com.infinitekind.moneydance.model.CurrencyType;
 import com.leastlogic.moneydance.util.MdUtil;
+import com.leastlogic.moneydance.util.MduExcepcionito;
 import com.leastlogic.moneydance.util.MduException;
 import com.leastlogic.moneydance.util.SecurityHandler;
 import com.leastlogic.moneydance.util.SnapshotList;
@@ -147,14 +148,12 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     * exist in an investment account. If so, store any new prices for this security.
     *
     * @param security Moneydance security
+    * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
    private void storeNewIBondPrices(CurrencyType security) throws MduException {
       String ticker = security.getTickerSymbol();
 
       if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
-         // don't catch exceptions here
-         this.importer.getIBondRates();
-
          try {
             List<PriceRec> iBondPrices = this.importer.getIBondPrices(ticker);
 
@@ -165,7 +164,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                   this.haveIBondSecurities = true;
                }
             } // end for each known price
-         } catch (MduException e) {
+         } catch (MduExcepcionito e) {
             display(e.getLocalizedMessage());
          }
       }
@@ -261,7 +260,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       this.iBondWindow.removeCloseableResource(this);
 
       return null;
-   } // end stopExecute(String)
+   } // end stopExecute()
 
    /**
     * Close this resource, relinquishing any underlying resources.

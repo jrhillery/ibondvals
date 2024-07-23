@@ -1,6 +1,7 @@
 package com.moneydance.modules.features.ibondvalues;
 
 import com.leastlogic.moneydance.util.MdUtil;
+import com.leastlogic.moneydance.util.MduExcepcionito;
 import com.leastlogic.moneydance.util.MduException;
 import org.dhatim.fastexcel.reader.Cell;
 import org.dhatim.fastexcel.reader.CellType;
@@ -146,6 +147,7 @@ public class IBondImporter {
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
     *
     * @return Navigable map containing historical I bond interest rates
+    * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
    public NavigableMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
       if (this.iBondRates == null) {
@@ -159,7 +161,7 @@ public class IBondImporter {
                      case sDate: this.sDateCol = cell.getColumnIndex(); break;
                   }
                }
-            } // end for each cell
+            } // end for each cell in first row
          });
 
          if (this.iRateCol < 0 || this.fRateCol < 0 || this.sDateCol < 0)
@@ -221,12 +223,12 @@ public class IBondImporter {
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
     * @return Date corresponding to the first day of the issue month
     */
-   private static LocalDate getDateForTicker(String tickerSymbol) throws MduException {
+   private static LocalDate getDateForTicker(String tickerSymbol) throws MduExcepcionito {
       try {
 
          return LocalDate.parse(tickerSymbol, TICKER_DATE_FORMATTER);
       } catch (Exception e) {
-         throw new MduException(e, "Problem parsing date from ticker symbol; %s",
+         throw new MduExcepcionito(e, "Problem parsing date from ticker symbol; %s",
             e.getLocalizedMessage());
       }
    } // end getDateForTicker(String)
@@ -237,13 +239,15 @@ public class IBondImporter {
     * @param month Initial month's starting date
     * @param tickerSymbol Ticker symbol
     * @return Corresponding I bond rate record
+    * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
+    * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
    private IBondRateRec getRateForMonth(LocalDate month, String tickerSymbol)
-         throws MduException {
+         throws MduExcepcionito, MduException {
       Map.Entry<LocalDate, IBondRateRec> fixedRateEntry = getIBondRates().floorEntry(month);
 
       if (fixedRateEntry == null)
-         throw new MduException(null, "No interest rates for I bonds issued %tF (%s)",
+         throw new MduExcepcionito(null, "No interest rates for I bonds issued %tF (%s)",
             month, tickerSymbol);
 
       return fixedRateEntry.getValue();
@@ -333,8 +337,11 @@ public class IBondImporter {
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
     * @return List containing I bond prices
+    * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
+    * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public List<PriceRec> getIBondPrices(String tickerSymbol) throws MduException {
+   public List<PriceRec> getIBondPrices(String tickerSymbol)
+         throws MduExcepcionito, MduException {
       ArrayList<PriceRec> iBondPrices = new ArrayList<>();
       LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate period = issueDate.withDayOfMonth(1);
@@ -370,7 +377,7 @@ public class IBondImporter {
             System.out.println("Balance on " + iBondPriceRec.date() + " = "
                + shares.multiply(iBondPriceRec.sharePrice()));
          }
-      } catch (MduException e) {
+      } catch (Exception e) {
          throw new RuntimeException(e);
       }
 
