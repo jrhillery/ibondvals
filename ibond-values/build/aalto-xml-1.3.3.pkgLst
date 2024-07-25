@@ -1,0 +1,6 @@
+com/fasterxml/aalto/*
+com/fasterxml/aalto/async/*
+com/fasterxml/aalto/impl/*
+com/fasterxml/aalto/in/*
+com/fasterxml/aalto/stax/*
+com/fasterxml/aalto/util/*
