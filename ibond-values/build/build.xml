@@ -31,10 +31,10 @@ http://jakarta.apache.org/ant/index.html
   <target name="ibondvalues" depends="init">
     <javac debug="${debug}" optimize="${optimize}"
       classpathref="classpath" destdir="${build}">
-    	<src path="${src}/src/main/java"/>
-    	<src path="${mdutil}/src/main/java"/>
-    	<src path="${swingutil}/src/main/java"/>
-  	</javac>
+        <src path="${src}/src/main/java"/>
+        <src path="${mdutil}/src/main/java"/>
+        <src path="${swingutil}/src/main/java"/>
+    </javac>
 
     <jar destfile="${dist}/ibondvalues.mxt">
       <fileset dir="${src}/src/main/resources"/>
@@ -46,7 +46,7 @@ http://jakarta.apache.org/ant/index.html
       <zipfileset src="${fastexcel.lib}/stax2-api-4.2.2.jar" includesfile="stax2-api-4.2.2.pkgLst"/>
     </jar>
 
-  	<delete dir="${build}/com"/>
+    <delete dir="${build}/com"/>
   </target>
 
   <target name="all" depends="ibondvalues"/>
