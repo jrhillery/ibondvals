@@ -1,5 +1,6 @@
 package com.moneydance.modules.features.ibondvalues;
 
+import com.leastlogic.moneydance.util.MdStorageUtil;
 import com.leastlogic.moneydance.util.StagedInterface;
 import com.leastlogic.swing.util.HTMLPane;
 
@@ -8,10 +9,12 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.WindowEvent;
 import java.util.ArrayDeque;
+import java.util.Map;
 
 import static javax.swing.GroupLayout.DEFAULT_SIZE;
 
 public class IBondWindow extends JFrame {
+   private final MdStorageUtil mdStorage;
    private JButton btnCommit;
    private HTMLPane pnOutputLog;
    private StagedInterface staged = null;
@@ -19,9 +22,12 @@ public class IBondWindow extends JFrame {
 
    /**
     * Create the frame.
+    *
+    * @param storage Moneydance local storage
     */
-   public IBondWindow() throws HeadlessException {
+   public IBondWindow(Map<String, String> storage) throws HeadlessException {
       super("I bond values");
+      this.mdStorage = new MdStorageUtil("ibond-values", storage);
       initComponents();
       wireEvents();
       readIconImage();
@@ -33,7 +39,7 @@ public class IBondWindow extends JFrame {
     */
    private void initComponents() {
       setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-      setSize(705, 436);
+      this.mdStorage.setWindowCoordinates(this, 705, 436);
       JPanel contentPane = new JPanel();
       contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
       setContentPane(contentPane);
@@ -169,9 +175,7 @@ public class IBondWindow extends JFrame {
     * @return null
     */
    public IBondWindow goAway() {
-      Dimension winSize = getSize();
-      System.err.format(getLocale(), "Closing %s with width=%.0f, height=%.0f.%n",
-         getTitle(), winSize.getWidth(), winSize.getHeight());
+      mdStorage.persistWindowCoordinates(this);
       setVisible(false);
       dispose();
 
@@ -193,7 +197,7 @@ public class IBondWindow extends JFrame {
    public static void main(String[] args) {
       EventQueue.invokeLater(() -> {
          try {
-            IBondWindow frame = new IBondWindow();
+            IBondWindow frame = new IBondWindow(null);
             frame.setVisible(true);
             frame.enableCommitButton(true);
          } catch (Exception e) {
