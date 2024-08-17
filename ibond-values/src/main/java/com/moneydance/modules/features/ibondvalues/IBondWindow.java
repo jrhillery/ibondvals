@@ -23,10 +23,11 @@ public class IBondWindow extends JFrame {
    /**
     * Create the frame.
     *
+    * @param title title for the frame
     * @param storage Moneydance local storage
     */
-   public IBondWindow(Map<String, String> storage) throws HeadlessException {
-      super("I bond values");
+   public IBondWindow(String title, Map<String, String> storage) throws HeadlessException {
+      super(title);
       this.mdStorage = new MdStorageUtil("ibond-values", storage);
       initComponents();
       wireEvents();
@@ -197,7 +198,7 @@ public class IBondWindow extends JFrame {
    public static void main(String[] args) {
       EventQueue.invokeLater(() -> {
          try {
-            IBondWindow frame = new IBondWindow(null);
+            IBondWindow frame = new IBondWindow("IBondWindow title", null);
             frame.setVisible(true);
             frame.enableCommitButton(true);
          } catch (Exception e) {

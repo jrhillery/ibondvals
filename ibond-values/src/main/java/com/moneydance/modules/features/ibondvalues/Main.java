@@ -74,7 +74,7 @@ public class Main extends FeatureModule implements AutoCloseable {
    private synchronized void showConsole() {
       if (this.iBondWindow == null) {
          this.iBondWindow = new IBondWindow(
-            getContext().getCurrentAccountBook().getLocalStorage());
+            getName(), getContext().getCurrentAccountBook().getLocalStorage());
          this.iBondWindow.addCloseableResource(this);
          this.iBondWindow.setVisible(true);
       } else {
