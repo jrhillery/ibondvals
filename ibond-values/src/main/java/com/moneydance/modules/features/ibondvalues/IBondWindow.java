@@ -192,20 +192,4 @@ public class IBondWindow extends JFrame {
       return null;
    } // end goAway()
 
-   /**
-    * Launch the application.
-    */
-   public static void main(String[] args) {
-      EventQueue.invokeLater(() -> {
-         try {
-            IBondWindow frame = new IBondWindow("IBondWindow title", null);
-            frame.setVisible(true);
-            frame.enableCommitButton(true);
-         } catch (Exception e) {
-            e.printStackTrace(System.out);
-         }
-      });
-
-   } // end main(String[])
-
 } // end class IBondWindow
