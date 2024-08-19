@@ -28,7 +28,7 @@ public class IBondWindow extends JFrame {
     * @param title title for the frame
     * @param storage Moneydance local storage
     */
-   public IBondWindow(String title, Map<String, String> storage) throws HeadlessException {
+   public IBondWindow(String title, Map<String, String> storage) {
       super(title);
       this.mdStorage = new MdStorageUtil("ibond-values", storage);
       initComponents();
