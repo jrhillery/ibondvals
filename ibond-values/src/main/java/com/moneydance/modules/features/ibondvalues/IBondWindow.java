@@ -2,6 +2,7 @@ package com.moneydance.modules.features.ibondvalues;
 
 import com.leastlogic.moneydance.util.MdStorageUtil;
 import com.leastlogic.moneydance.util.StagedInterface;
+import com.leastlogic.swing.util.AwtScreenUtil;
 import com.leastlogic.swing.util.HTMLPane;
 
 import javax.swing.*;
@@ -17,6 +18,7 @@ public class IBondWindow extends JFrame {
    private final MdStorageUtil mdStorage;
    private JButton btnCommit;
    private HTMLPane pnOutputLog;
+   private final AwtScreenUtil screenUtil = new AwtScreenUtil(this);
    private StagedInterface staged = null;
    private final ArrayDeque<AutoCloseable> closeableResources = new ArrayDeque<>();
 
@@ -40,7 +42,7 @@ public class IBondWindow extends JFrame {
     */
    private void initComponents() {
       setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-      this.mdStorage.setWindowCoordinates(this, 705, 436);
+      this.screenUtil.setWindowCoordinates(this.mdStorage, 705, 436);
       JPanel contentPane = new JPanel();
       contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
       setContentPane(contentPane);
@@ -176,7 +178,7 @@ public class IBondWindow extends JFrame {
     * @return null
     */
    public IBondWindow goAway() {
-      mdStorage.persistWindowCoordinates(this);
+      this.screenUtil.persistWindowCoordinates(this.mdStorage);
       setVisible(false);
       dispose();
 
