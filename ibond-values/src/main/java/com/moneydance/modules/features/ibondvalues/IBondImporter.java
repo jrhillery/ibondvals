@@ -102,6 +102,7 @@ public class IBondImporter {
     * of a spreadsheet on the TreasuryDirect website.
     *
     * @return Row spliterator over data sheet
+    * @throws MduException Problem retrieving TreasuryDirect spreadsheet data sheet
     */
    private Spliterator<Row> getDataRowIterator() throws MduException {
       String uriStr = getProperty("url.treasurydirect");
@@ -152,27 +153,38 @@ public class IBondImporter {
    public NavigableMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
       if (this.iBondRates == null) {
          Spliterator<Row> dataRowItr = getDataRowIterator();
-         dataRowItr.tryAdvance(row -> {
-            for (Cell cell : row) {
-               if (cell.getType() == STRING) {
-                  switch (IBondHistColHdr.getEnum(cell.asString())) {
-                     case iRate: this.iRateCol = cell.getColumnIndex(); break;
-                     case fRate: this.fRateCol = cell.getColumnIndex(); break;
-                     case sDate: this.sDateCol = cell.getColumnIndex(); break;
-                  }
-               }
-            } // end for each cell in first row
-         });
-
-         if (this.iRateCol < 0 || this.fRateCol < 0 || this.sDateCol < 0)
-            throw new MduException(null, "Unable to locate column headers %s in %s",
-               IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
-
+         loadColumnIndexes(dataRowItr);
          this.iBondRates = getIBondRates(dataRowItr);
       }
 
       return this.iBondRates;
    } // end getIBondRates()
+
+   /**
+    * Load the column indexes of interest into our corresponding fields. Find
+    * these column headers in the next row provided by the supplied spliterator.
+    *
+    * @param dataRowItr Row spliterator over the data sheet portion of the spreadsheet to use
+    * @throws MduException Problem finding all interesting column headers
+    */
+   private void loadColumnIndexes(Spliterator<Row> dataRowItr) throws MduException {
+      dataRowItr.tryAdvance(row -> {
+         for (Cell cell : row) {
+            if (cell.getType() == STRING) {
+               switch (IBondHistColHdr.getEnum(cell.asString())) {
+                  case iRate: this.iRateCol = cell.getColumnIndex(); break;
+                  case fRate: this.fRateCol = cell.getColumnIndex(); break;
+                  case sDate: this.sDateCol = cell.getColumnIndex(); break;
+               }
+            }
+         } // end for each cell in the next row
+      });
+
+      if (this.iRateCol < 0 || this.fRateCol < 0 || this.sDateCol < 0)
+         throw new MduException(null, "Unable to locate column headers %s in %s",
+            IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
+
+   } // end loadColumnIndexes(Spliterator<Row>)
 
    /**
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
