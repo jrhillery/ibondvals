@@ -47,9 +47,9 @@ public class IBondImporter {
 
    private static final int INTEREST_RATE_DIGITS = 4;
    private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
-   private static final int INTEREST_DIGITS = 8;
-   private static final int RATE_SET_INTERVAL = 6; // months
+   private static final int PRICE_DIGITS = 8;
    private static final int SEMIANNUAL_MONTHS = 6;
+   private static final int RATE_SET_INTERVAL = 6; // months
    private static final DateTimeFormatter TICKER_DATE_FORMATTER =
       new DateTimeFormatterBuilder()
          .parseCaseInsensitive()
@@ -132,17 +132,17 @@ public class IBondImporter {
    } // end getDataRowIterator()
 
    /**
-    * Retrieve a numeric value from a spreadsheet cell
-    * and clean it up to avoid lots of zeros and nines.
+    * Retrieve an interest rate value from a spreadsheet
+    * cell and clean it up to avoid lots of zeros and nines.
     *
     * @param cell Cell to interrogate
     * @return BigDecimal value rounded to the fourth place past the decimal point
     */
-   private static BigDecimal getNumericClean(Cell cell) {
+   private static BigDecimal getInterestRateClean(Cell cell) {
       BigDecimal bd = cell.asNumber();
 
       return bd.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
-   } // end getNumericClean(Cell)
+   } // end getInterestRateClean(Cell)
 
    /**
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
@@ -201,8 +201,8 @@ public class IBondImporter {
          Cell sDateCell = getCellOfType(this.sDateCol, FORMULA, row);
 
          if (iRateCell != null && fRateCell != null && sDateCell != null) {
-            BigDecimal inflateRate = getNumericClean(iRateCell);
-            BigDecimal fixedRate = getNumericClean(fRateCell);
+            BigDecimal inflateRate = getInterestRateClean(iRateCell);
+            BigDecimal fixedRate = getInterestRateClean(fRateCell);
             LocalDate startDate = sDateCell.asDate().toLocalDate();
             iBondRates.put(startDate, new IBondRateRec(inflateRate, fixedRate, startDate));
          }
@@ -307,7 +307,7 @@ public class IBondImporter {
                                                LocalDate month, List<PriceRec> iBondPrices) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, HALF_EVEN);
       BigDecimal monthAccrual =
-         iBondPrice.multiply(monthlyRate).setScale(INTEREST_DIGITS, HALF_EVEN);
+         iBondPrice.multiply(monthlyRate).setScale(PRICE_DIGITS, HALF_EVEN);
       BigDecimal accrual = iBondPrice;
 
       for (int m = 1; m < SEMIANNUAL_MONTHS; ++m) {
@@ -369,7 +369,7 @@ public class IBondImporter {
 
          BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, HALF_EVEN);
          iBondPrice = iBondPrice.add(
-            iBondPrice.multiply(semiannualRate).setScale(INTEREST_DIGITS, HALF_EVEN));
+            iBondPrice.multiply(semiannualRate).setScale(PRICE_DIGITS, HALF_EVEN));
          period = period.plusMonths(SEMIANNUAL_MONTHS);
          iBondPrices.add(new PriceRec(iBondPrice, period));
       } // end while semiannual compounding periods
