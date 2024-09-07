@@ -123,8 +123,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     *
     * @param security Moneydance security to use
     * @param priceRec Security price for a specified date
+    * @return CurrencySnapshot for the price date, if any
     */
-   private void storePriceQuoteIfDiff(CurrencyType security, PriceRec priceRec) {
+   private CurrencySnapshot storePriceQuoteIfDiff(CurrencyType security, PriceRec priceRec) {
       BigDecimal oldPrice, price = priceRec.sharePrice();
       int priceDate = MdUtil.convLocalToDateInt(priceRec.date());
       SnapshotList ssList = new SnapshotList(security);
@@ -141,6 +142,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          addHandler(sh.storeNewPrice(price.doubleValue(), priceDate));
       }
 
+      return ss;
    } // end storePriceQuoteIfDiff(CurrencyType, PriceRec)
 
    /**
@@ -155,15 +157,18 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
       if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
          try {
+            CurrencySnapshot currentSnapshot = null;
             List<PriceRec> iBondPrices = this.importer.getIBondPrices(ticker);
 
             for (PriceRec iBondPrice : iBondPrices) {
                // avoid creating future price quotes
                if (!iBondPrice.date().isAfter(this.today)) {
-                  storePriceQuoteIfDiff(security, iBondPrice);
+                  currentSnapshot = storePriceQuoteIfDiff(security, iBondPrice);
                   this.haveIBondSecurities = true;
                }
             } // end for each known price
+
+            MdUtil.validateCurrentUserRate(security, currentSnapshot);
          } catch (MduExcepcionito e) {
             display(e.getLocalizedMessage());
          }
