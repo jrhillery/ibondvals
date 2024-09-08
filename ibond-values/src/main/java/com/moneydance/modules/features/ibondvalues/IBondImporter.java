@@ -348,7 +348,7 @@ public class IBondImporter {
     * Make a list of I bond prices for each month for which interest rates are known.
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
-    * @return List containing I bond prices
+    * @return List containing I bond prices in chronological order
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
