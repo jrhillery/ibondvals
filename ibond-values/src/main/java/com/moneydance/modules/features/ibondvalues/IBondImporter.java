@@ -16,7 +16,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Properties;
@@ -256,13 +255,13 @@ public class IBondImporter {
     */
    private IBondRateRec getRateForMonth(LocalDate month, String tickerSymbol)
          throws MduExcepcionito, MduException {
-      Map.Entry<LocalDate, IBondRateRec> fixedRateEntry = getIBondRates().floorEntry(month);
+      LocalDate rateDate = getIBondRates().floorKey(month);
 
-      if (fixedRateEntry == null)
+      if (rateDate == null)
          throw new MduExcepcionito(null, "No interest rates for I bonds issued %tF (%s)",
             month, tickerSymbol);
 
-      return fixedRateEntry.getValue();
+      return getIBondRates().get(rateDate);
    } // end getRateForMonth(LocalDate, String)
 
    /**
