@@ -15,10 +15,10 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.NavigableMap;
+import java.util.NavigableSet;
 import java.util.Properties;
 import java.util.Spliterator;
 import java.util.TreeMap;
@@ -301,10 +301,11 @@ public class IBondImporter {
     * @param iBondPrice Initial I bond price
     * @param compositeRate Composite interest rate to use
     * @param month Initial month's starting date
-    * @param iBondPrices List to which I bond prices are added
+    * @param iBondPrices Mapping from dates to I bond prices to which I bond prices are added
     */
-   private static void addNonCompoundingMonths(BigDecimal iBondPrice, BigDecimal compositeRate,
-                                               LocalDate month, List<PriceRec> iBondPrices) {
+   private static void addNonCompoundingMonths(
+         BigDecimal iBondPrice, BigDecimal compositeRate,
+         LocalDate month, TreeMap<LocalDate, BigDecimal> iBondPrices) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, HALF_EVEN);
       BigDecimal monthAccrual =
          iBondPrice.multiply(monthlyRate).setScale(PRICE_DIGITS, HALF_EVEN);
@@ -313,54 +314,61 @@ public class IBondImporter {
       for (int m = 1; m < SEMIANNUAL_MONTHS; ++m) {
          accrual = accrual.add(monthAccrual);
          month = month.plusMonths(1);
-         iBondPrices.add(new PriceRec(accrual, month));
+         iBondPrices.put(month, accrual);
       } // end for non-compounding months
 
-   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, LocalDate, List<PriceRec>)
+   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, LocalDate, TreeMap<LocalDate, BigDecimal>)
 
    /**
     * Lose some interest in the first years of I bond life.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     *
     * @param issueDate Date I bond was issued
-    * @param iBondPrices List containing I bond prices
+    * @param iBondPrices Mapping from dates to I bond prices
     */
    private static void loseInterestInFirstYears(
-         LocalDate issueDate, List<PriceRec> iBondPrices) {
-
-      for (int i = iBondPrices.size(); --i >= 3; ) {
-         PriceRec priceRec = iBondPrices.get(i);
-
-         if (priceRec.date().isBefore(issueDate.withDayOfMonth(1).plusYears(5))) {
-            // overwrite price with one from 3 months earlier
-            priceRec.sharePrice(iBondPrices.get(i - 3).sharePrice());
-         }
-      }
+         LocalDate issueDate, TreeMap<LocalDate, BigDecimal> iBondPrices) {
 
       if (iBondPrices.size() > 2) {
-         iBondPrices.get(2).sharePrice(iBondPrices.get(0).sharePrice());
-         iBondPrices.get(1).sharePrice(iBondPrices.get(0).sharePrice());
+         NavigableSet<LocalDate> iBondDates = iBondPrices.navigableKeySet();
+         Iterator<LocalDate> current = iBondDates.descendingIterator();
+         Iterator<LocalDate> threePrior = iBondDates.descendingIterator();
+         threePrior.next(); threePrior.next(); threePrior.next();
+         LocalDate year5Age = issueDate.withDayOfMonth(1).plusYears(5);
+
+         while (threePrior.hasNext()) {
+            LocalDate currentDate = current.next();
+            LocalDate threePriorDate = threePrior.next();
+
+            if (currentDate.isBefore(year5Age)) {
+               // overwrite price with one from 3 months earlier
+               iBondPrices.put(currentDate, iBondPrices.get(threePriorDate));
+            }
+         } // end while more prior months
+
+         iBondPrices.put(current.next(), iBondPrices.get(iBondDates.first()));
+         iBondPrices.put(current.next(), iBondPrices.get(iBondDates.first()));
       }
 
-   } // end loseInterestInFirstYears(LocalDate, List<PriceRec>)
+   } // end loseInterestInFirstYears(LocalDate, TreeMap<LocalDate, BigDecimal>)
 
    /**
     * Make a list of I bond prices for each month for which interest rates are known.
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
-    * @return List containing I bond prices in chronological order
+    * @return Mapping from dates to I bond prices
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public List<PriceRec> getIBondPrices(String tickerSymbol)
+   public TreeMap<LocalDate, BigDecimal> getIBondPrices(String tickerSymbol)
          throws MduExcepcionito, MduException {
-      ArrayList<PriceRec> iBondPrices = new ArrayList<>();
+      TreeMap<LocalDate, BigDecimal> iBondPrices = new TreeMap<>();
       LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate period = issueDate.withDayOfMonth(1);
 
       BigDecimal fixedRate = getRateForMonth(period, tickerSymbol).fixedRate();
       BigDecimal iBondPrice = BigDecimal.ONE;
-      iBondPrices.add(new PriceRec(iBondPrice, period));
+      iBondPrices.put(period, iBondPrice);
 
       while (period.isBefore(getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL))) {
          BigDecimal inflateRate = getRateForMonth(period, tickerSymbol).inflationRate();
@@ -371,7 +379,7 @@ public class IBondImporter {
          iBondPrice = iBondPrice.add(
             iBondPrice.multiply(semiannualRate).setScale(PRICE_DIGITS, HALF_EVEN));
          period = period.plusMonths(SEMIANNUAL_MONTHS);
-         iBondPrices.add(new PriceRec(iBondPrice, period));
+         iBondPrices.put(period, iBondPrice);
       } // end while semiannual compounding periods
 
       loseInterestInFirstYears(issueDate, iBondPrices);
@@ -382,13 +390,11 @@ public class IBondImporter {
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         List<PriceRec> iBondPrices = importer.getIBondPrices("IBond201901");
+         TreeMap<LocalDate, BigDecimal> iBondPrices = importer.getIBondPrices("IBond201901");
          BigDecimal shares = BigDecimal.valueOf(25);
 
-         for (PriceRec iBondPriceRec : iBondPrices) {
-            System.out.println("Balance on " + iBondPriceRec.date() + " = "
-               + shares.multiply(iBondPriceRec.sharePrice()));
-         }
+         iBondPrices.forEach((date, price) ->
+            System.out.format("Balance on %s = %s%n", date, shares.multiply(price)));
       } catch (Exception e) {
          throw new RuntimeException(e);
       }

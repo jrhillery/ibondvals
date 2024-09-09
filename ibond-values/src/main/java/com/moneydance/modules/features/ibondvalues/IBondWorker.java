@@ -20,6 +20,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.TreeMap;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -119,48 +120,27 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end haveShares(CurrencyType)
 
    /**
-    * @param priceRecs List of price records in chronological order
-    * @return The price record date for today
-    */
-   private LocalDate getPriceDateForToday(List<PriceRec> priceRecs) {
-      int index = priceRecs.size();
-
-      if (index == 0)
-         return this.today;
-
-      // start with the latest price
-      LocalDate candidate = priceRecs.get(--index).date();
-
-      while (candidate.isAfter(this.today) && index > 0) {
-         // examine the prior price
-         candidate = priceRecs.get(--index).date();
-      }
-
-      return candidate;
-   } // end getPriceDateForToday(List<PriceRec>)
-
-   /**
     * Store a handler for a deferred price quote if it differs Moneydance data.
     *
-    * @param security Moneydance security to use
-    * @param priceRec Security price for a specified date
-    * @param current The price is current
-    * @return CurrencySnapshot for the price date, if any
+    * @param ssList       Snapshot list to use
+    * @param priceLocDate Date for this price quote
+    * @param price        Security price for the specified date
+    * @param current      The price is current
     */
-   private CurrencySnapshot storePriceQuoteIfDiff(CurrencyType security,
-                                                  PriceRec priceRec, boolean current) {
-      BigDecimal oldPrice, price = priceRec.sharePrice();
-      int priceDate = MdUtil.convLocalToDateInt(priceRec.date());
-      SnapshotList ssList = new SnapshotList(security);
+   private void storePriceQuoteIfDiff(
+         SnapshotList ssList, LocalDate priceLocDate, BigDecimal price, boolean current) {
+      CurrencyType security = ssList.getSecurity();
+      int priceDate = MdUtil.convLocalToDateInt(priceLocDate);
       CurrencySnapshot ss = ssList.getSnapshotForDate(priceDate);
-      oldPrice = ss == null ? BigDecimal.ONE : MdUtil.convRateToPrice(ss.getRate());
+      BigDecimal oldPrice = ss == null ? BigDecimal.ONE
+         : MdUtil.convRateToPrice(ss.getRate());
 
       // store this quote if it differs
       if (ss == null || priceDate != ss.getDateInt() || price.compareTo(oldPrice) != 0) {
          NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, price);
          display(String.format(this.locale, "Set %s (%s) price to %s for %tF.",
             security.getName(), security.getTickerSymbol(),
-            priceFmt.format(price), priceRec.date()));
+            priceFmt.format(price), priceLocDate));
          SecurityHandler sh = new SecurityHandler(ssList);
 
          if (!current)
@@ -168,8 +148,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          addHandler(sh.storeNewPrice(price.doubleValue(), priceDate));
       }
 
-      return ss;
-   } // end storePriceQuoteIfDiff(CurrencyType, PriceRec, boolean)
+   } // end storePriceQuoteIfDiff(SnapshotList, LocalDate, BigDecimal, boolean)
 
    /**
     * Check if this security has a ticker symbol for Series I savings bonds and if shares
@@ -183,20 +162,14 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
       if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
          try {
-            CurrencySnapshot currentSnapshot = null;
-            List<PriceRec> iBondPrices = this.importer.getIBondPrices(ticker);
-            LocalDate priceDateForToday = getPriceDateForToday(iBondPrices);
+            SnapshotList ssList = new SnapshotList(security);
+            TreeMap<LocalDate, BigDecimal> prices = this.importer.getIBondPrices(ticker);
+            LocalDate priceDateForToday = prices.floorKey(this.today);
 
-            for (PriceRec iBondPrice : iBondPrices) {
-               if (iBondPrice.date().equals(priceDateForToday)) {
-                  // this price quote is the current one
-                  currentSnapshot = storePriceQuoteIfDiff(security, iBondPrice, true);
-               } else {
-                  storePriceQuoteIfDiff(security, iBondPrice, false);
-               }
-            } // end for each known price
+            prices.forEach((date, price) ->
+               storePriceQuoteIfDiff(ssList, date, price, date.equals(priceDateForToday)));
 
-            MdUtil.validateCurrentUserRate(security, currentSnapshot);
+            MdUtil.validateCurrentUserRate(security, ssList.getTodaysSnapshot());
             this.haveIBondSecurities = true;
          } catch (MduExcepcionito e) {
             display(e.getLocalizedMessage());
