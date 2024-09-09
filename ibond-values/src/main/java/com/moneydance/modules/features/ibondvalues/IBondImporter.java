@@ -16,7 +16,6 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.Iterator;
-import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.Properties;
 import java.util.Spliterator;
@@ -34,8 +33,8 @@ public class IBondImporter {
    /** Spreadsheet location */
    private URI iBondRateHistory = null;
    private Properties props = null;
-   /** Navigable map containing historical I bond interest rates */
-   private NavigableMap<LocalDate, IBondRateRec> iBondRates = null;
+   /** Mapping from dates to historical I bond interest rates */
+   private TreeMap<LocalDate, IBondRateRec> iBondRates = null;
    /** Column index of semiannual inflation interest rates */
    private int iRateCol = -1;
    /** Column index of fixed interest rates */
@@ -146,10 +145,10 @@ public class IBondImporter {
    /**
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
     *
-    * @return Navigable map containing historical I bond interest rates
+    * @return Mapping from dates to historical I bond interest rates
     * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public NavigableMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
+   public TreeMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
       if (this.iBondRates == null) {
          Spliterator<Row> dataRowItr = getDataRowIterator();
          loadColumnIndexes(dataRowItr);
@@ -189,9 +188,9 @@ public class IBondImporter {
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
     *
     * @param dataRowItr Row spliterator over the data sheet portion of the spreadsheet to use
-    * @return Navigable map containing historical I bond interest rates
+    * @return Mapping from dates to historical I bond interest rates
     */
-   private NavigableMap<LocalDate, IBondRateRec> getIBondRates(Spliterator<Row> dataRowItr) {
+   private TreeMap<LocalDate, IBondRateRec> getIBondRates(Spliterator<Row> dataRowItr) {
       TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
 
       dataRowItr.forEachRemaining(row -> {
