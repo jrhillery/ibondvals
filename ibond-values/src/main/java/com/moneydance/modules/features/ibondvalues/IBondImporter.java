@@ -257,7 +257,8 @@ public class IBondImporter {
       LocalDate rateDate = getIBondRates().floorKey(month);
 
       if (rateDate == null)
-         throw new MduExcepcionito(null, "No interest rates for I bonds issued %tF (%s)",
+         throw new MduExcepcionito(null,
+            "No interest rates for I bonds issued as early as %tF (%s)",
             month, tickerSymbol);
 
       return getIBondRates().get(rateDate);
@@ -344,8 +345,9 @@ public class IBondImporter {
             }
          } // end while more prior months
 
-         iBondPrices.put(current.next(), iBondPrices.get(iBondDates.first()));
-         iBondPrices.put(current.next(), iBondPrices.get(iBondDates.first()));
+         iBondPrices.put(current.next(), BigDecimal.ONE);
+         iBondPrices.put(current.next(), BigDecimal.ONE);
+         iBondPrices.put(current.next(), BigDecimal.ONE);
       }
 
    } // end loseInterestInFirstYears(LocalDate, TreeMap<LocalDate, BigDecimal>)
@@ -366,7 +368,6 @@ public class IBondImporter {
 
       BigDecimal fixedRate = getRateForMonth(period, tickerSymbol).fixedRate();
       BigDecimal iBondPrice = BigDecimal.ONE;
-      iBondPrices.put(period, iBondPrice);
 
       while (period.isBefore(getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL))) {
          BigDecimal inflateRate = getRateForMonth(period, tickerSymbol).inflationRate();
@@ -379,6 +380,11 @@ public class IBondImporter {
          period = period.plusMonths(SEMIANNUAL_MONTHS);
          iBondPrices.put(period, iBondPrice);
       } // end while semiannual compounding periods
+
+      if (iBondPrices.isEmpty())
+         throw new MduExcepcionito(null,
+            "No interest rates for I bonds issued as late as %tF (%s)",
+            issueDate, tickerSymbol);
 
       loseInterestInFirstYears(issueDate, iBondPrices);
 
