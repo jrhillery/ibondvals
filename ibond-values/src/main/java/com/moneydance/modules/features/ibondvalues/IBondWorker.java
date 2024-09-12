@@ -81,9 +81,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    public String commitChanges() {
       int numPricesSet = this.priceChanges.size();
 
-      for (SecurityHandler sHandler : this.priceChanges) {
-         sHandler.applyUpdate();
-      }
+      this.priceChanges.forEach(SecurityHandler::applyUpdate);
       this.priceChanges.clear();
 
       return String.format(this.locale,
