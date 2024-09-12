@@ -122,30 +122,30 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    /**
     * Store a handler for a deferred price quote if it differs Moneydance data.
     *
-    * @param ssList       Snapshot list to use
-    * @param priceLocDate Date for this price quote
-    * @param price        Security price for the specified date
-    * @param current      The price is current
+    * @param ssList    Snapshot list to use
+    * @param priceDate Date for this price quote
+    * @param price     Security price for the specified date
+    * @param current   The price is current
     */
    private void storePriceQuoteIfDiff(
-         SnapshotList ssList, LocalDate priceLocDate, BigDecimal price, boolean current) {
+      SnapshotList ssList, LocalDate priceDate, BigDecimal price, boolean current) {
       CurrencyType security = ssList.getSecurity();
-      int priceDate = MdUtil.convLocalToDateInt(priceLocDate);
-      CurrencySnapshot ss = ssList.getSnapshotForDate(priceDate);
+      int priceDateInt = MdUtil.convLocalToDateInt(priceDate);
+      CurrencySnapshot ss = ssList.getSnapshotForDate(priceDateInt);
       BigDecimal oldPrice = ss == null ? BigDecimal.ONE
          : MdUtil.convRateToPrice(ss.getRate());
 
       // store this quote if it differs
-      if (ss == null || priceDate != ss.getDateInt() || price.compareTo(oldPrice) != 0) {
+      if (ss == null || priceDateInt != ss.getDateInt() || price.compareTo(oldPrice) != 0) {
          NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, price);
          display(String.format(this.locale, "Set %s (%s) price to %s for %tF.",
             security.getName(), security.getTickerSymbol(),
-            priceFmt.format(price), priceLocDate));
+            priceFmt.format(price), priceDate));
          SecurityHandler sh = new SecurityHandler(ssList);
 
          if (!current)
             sh.priceNotCurrent();
-         addHandler(sh.storeNewPrice(price.doubleValue(), priceDate));
+         addHandler(sh.storeNewPrice(price.doubleValue(), priceDateInt));
       }
 
    } // end storePriceQuoteIfDiff(SnapshotList, LocalDate, BigDecimal, boolean)
