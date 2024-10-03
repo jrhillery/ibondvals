@@ -247,7 +247,7 @@ public class IBondImporter {
    /**
     * Find the Series I savings bond interest rate history data for a given month.
     *
-    * @param month Initial month's starting date
+    * @param month Any date in month for which to return I bond rate record
     * @param tickerSymbol Ticker symbol
     * @return Corresponding I bond rate record
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
@@ -274,7 +274,7 @@ public class IBondImporter {
     * @param fixedRate Fixed interest rate
     * @param inflationRate Semiannual inflation interest rate
     * @param issueDate Date I bond was issued
-    * @param month Initial month's starting date
+    * @param month Starting date of month for which the interest rate is being composed
     * @return Composite interest rate
     */
    private static BigDecimal combineRate(BigDecimal fixedRate, BigDecimal inflationRate,
@@ -364,21 +364,21 @@ public class IBondImporter {
          throws MduExcepcionito, MduException {
       TreeMap<LocalDate, BigDecimal> iBondPrices = new TreeMap<>();
       LocalDate issueDate = getDateForTicker(tickerSymbol);
-      LocalDate period = issueDate.withDayOfMonth(1);
+      LocalDate month = issueDate.withDayOfMonth(1);
 
       LocalDate firstUnknownDate = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
-      BigDecimal fixedRate = getRateForMonth(period, tickerSymbol).fixedRate();
+      BigDecimal fixedRate = getRateForMonth(month, tickerSymbol).fixedRate();
       BigDecimal iBondPrice = BigDecimal.ONE;
 
-      while (period.isBefore(firstUnknownDate)) {
-         BigDecimal inflateRate = getRateForMonth(period, tickerSymbol).inflationRate();
-         BigDecimal compositeRate = combineRate(fixedRate, inflateRate, issueDate, period);
-         addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
+      while (month.isBefore(firstUnknownDate)) {
+         BigDecimal inflateRate = getRateForMonth(month, tickerSymbol).inflationRate();
+         BigDecimal compositeRate = combineRate(fixedRate, inflateRate, issueDate, month);
+         addNonCompoundingMonths(iBondPrice, compositeRate, month, iBondPrices);
 
          BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, DECIMAL64);
          iBondPrice = iBondPrice.add(iBondPrice.multiply(semiannualRate, DECIMAL64));
-         period = period.plusMonths(SEMIANNUAL_MONTHS);
-         iBondPrices.put(period, iBondPrice.setScale(PRICE_DIGITS, HALF_EVEN));
+         month = month.plusMonths(SEMIANNUAL_MONTHS);
+         iBondPrices.put(month, iBondPrice.setScale(PRICE_DIGITS, HALF_EVEN));
       } // end while semiannual compounding periods
 
       if (iBondPrices.isEmpty())
