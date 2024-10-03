@@ -21,6 +21,7 @@ import java.util.Properties;
 import java.util.Spliterator;
 import java.util.TreeMap;
 
+import static java.math.MathContext.DECIMAL64;
 import static java.math.RoundingMode.HALF_EVEN;
 import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
@@ -305,7 +306,7 @@ public class IBondImporter {
    private static void addNonCompoundingMonths(
          BigDecimal iBondPrice, BigDecimal compositeRate,
          LocalDate month, TreeMap<LocalDate, BigDecimal> iBondPrices) {
-      BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, HALF_EVEN);
+      BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
       BigDecimal monthAccrual =
          iBondPrice.multiply(monthlyRate).setScale(PRICE_DIGITS, HALF_EVEN);
       BigDecimal accrual = iBondPrice;
@@ -374,7 +375,7 @@ public class IBondImporter {
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate, issueDate, period);
          addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
 
-         BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, HALF_EVEN);
+         BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, DECIMAL64);
          iBondPrice = iBondPrice.add(
             iBondPrice.multiply(semiannualRate).setScale(PRICE_DIGITS, HALF_EVEN));
          period = period.plusMonths(SEMIANNUAL_MONTHS);
