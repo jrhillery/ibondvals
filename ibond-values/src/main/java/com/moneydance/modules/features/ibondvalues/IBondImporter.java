@@ -46,7 +46,7 @@ public class IBondImporter {
 
    private static final int INTEREST_RATE_DIGITS = 4;
    private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
-   private static final int PRICE_DIGITS = 8;
+   private static final int PRICE_DIGITS = 4;
    private static final int SEMIANNUAL_MONTHS = 6;
    private static final int RATE_SET_INTERVAL = 6; // months
    private static final DateTimeFormatter TICKER_DATE_FORMATTER =
@@ -307,14 +307,13 @@ public class IBondImporter {
          BigDecimal iBondPrice, BigDecimal compositeRate,
          LocalDate month, TreeMap<LocalDate, BigDecimal> iBondPrices) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
-      BigDecimal monthAccrual =
-         iBondPrice.multiply(monthlyRate).setScale(PRICE_DIGITS, HALF_EVEN);
+      BigDecimal monthAccrual = iBondPrice.multiply(monthlyRate, DECIMAL64);
       BigDecimal accrual = iBondPrice;
 
       for (int m = 1; m < SEMIANNUAL_MONTHS; ++m) {
          accrual = accrual.add(monthAccrual);
          month = month.plusMonths(1);
-         iBondPrices.put(month, accrual);
+         iBondPrices.put(month, accrual.setScale(PRICE_DIGITS, HALF_EVEN));
       } // end for non-compounding months
 
    } // end addNonCompoundingMonths(BigDecimal, BigDecimal, LocalDate, TreeMap<LocalDate, BigDecimal>)
@@ -376,10 +375,9 @@ public class IBondImporter {
          addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
 
          BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, DECIMAL64);
-         iBondPrice = iBondPrice.add(
-            iBondPrice.multiply(semiannualRate).setScale(PRICE_DIGITS, HALF_EVEN));
+         iBondPrice = iBondPrice.add(iBondPrice.multiply(semiannualRate, DECIMAL64));
          period = period.plusMonths(SEMIANNUAL_MONTHS);
-         iBondPrices.put(period, iBondPrice);
+         iBondPrices.put(period, iBondPrice.setScale(PRICE_DIGITS, HALF_EVEN));
       } // end while semiannual compounding periods
 
       if (iBondPrices.isEmpty())
