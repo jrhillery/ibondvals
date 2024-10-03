@@ -366,10 +366,11 @@ public class IBondImporter {
       LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate period = issueDate.withDayOfMonth(1);
 
+      LocalDate firstUnknownDate = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
       BigDecimal fixedRate = getRateForMonth(period, tickerSymbol).fixedRate();
       BigDecimal iBondPrice = BigDecimal.ONE;
 
-      while (period.isBefore(getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL))) {
+      while (period.isBefore(firstUnknownDate)) {
          BigDecimal inflateRate = getRateForMonth(period, tickerSymbol).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate, issueDate, period);
          addNonCompoundingMonths(iBondPrice, compositeRate, period, iBondPrices);
