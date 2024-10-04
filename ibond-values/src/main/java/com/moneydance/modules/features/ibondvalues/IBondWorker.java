@@ -126,7 +126,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     * @param current   The price is current
     */
    private void storePriceQuoteIfDiff(
-      SnapshotList ssList, LocalDate priceDate, BigDecimal price, boolean current) {
+           SnapshotList ssList, LocalDate priceDate, BigDecimal price, boolean current) {
       CurrencyType security = ssList.getSecurity();
       int priceDateInt = MdUtil.convLocalToDateInt(priceDate);
       CurrencySnapshot ss = ssList.getSnapshotForDate(priceDateInt);
