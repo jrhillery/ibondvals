@@ -149,6 +149,21 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end storePriceQuoteIfDiff(SnapshotList, LocalDate, BigDecimal, boolean)
 
    /**
+    * Validate the current price.
+    *
+    * @param ssList The list of snapshots to use
+    */
+   private static void validateTodaysPrice(SnapshotList ssList) {
+      CurrencySnapshot currentSnapshot = ssList.getTodaysSnapshot();
+
+      if (currentSnapshot != null) {
+         BigDecimal price = MdUtil.convRateToPrice(currentSnapshot.getRate());
+         MdUtil.validateCurrentUserRate(ssList.getSecurity(), price, currentSnapshot);
+      }
+
+   } // end validateTodaysPrice(SnapshotList)
+
+   /**
     * Check if this security has a ticker symbol for Series I savings bonds and if shares
     * exist in an investment account. If so, store any new prices for this security.
     *
@@ -167,7 +182,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
             prices.forEach((date, price) ->
                storePriceQuoteIfDiff(ssList, date, price, date.equals(priceDateForToday)));
 
-            MdUtil.validateCurrentUserRate(security, ssList.getTodaysSnapshot());
+            validateTodaysPrice(ssList);
             this.haveIBondSecurities = true;
          } catch (MduExcepcionito e) {
             display(e.getLocalizedMessage());
