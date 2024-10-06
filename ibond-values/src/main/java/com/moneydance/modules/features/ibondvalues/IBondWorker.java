@@ -153,12 +153,13 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     *
     * @param ssList The list of snapshots to use
     */
-   private static void validateTodaysPrice(SnapshotList ssList) {
+   private void validateTodaysPrice(SnapshotList ssList) {
       CurrencySnapshot currentSnapshot = ssList.getTodaysSnapshot();
 
       if (currentSnapshot != null) {
          BigDecimal price = MdUtil.convRateToPrice(currentSnapshot.getRate());
-         MdUtil.validateCurrentUserRate(ssList.getSecurity(), price, currentSnapshot);
+         MdUtil.validateCurrentUserRate(ssList.getSecurity(), price, currentSnapshot)
+                 .ifPresent(this::display);
       }
 
    } // end validateTodaysPrice(SnapshotList)
@@ -176,13 +177,13 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
          try {
             SnapshotList ssList = new SnapshotList(security);
+            validateTodaysPrice(ssList);
             TreeMap<LocalDate, BigDecimal> prices = this.importer.getIBondPrices(ticker);
             LocalDate priceDateForToday = prices.floorKey(this.today);
 
             prices.forEach((date, price) ->
                storePriceQuoteIfDiff(ssList, date, price, date.equals(priceDateForToday)));
 
-            validateTodaysPrice(ssList);
             this.haveIBondSecurities = true;
          } catch (MduExcepcionito e) {
             display(e.getLocalizedMessage());
