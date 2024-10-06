@@ -135,7 +135,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
       // store this quote if it differs
       if (ss == null || priceDateInt != ss.getDateInt() || price.compareTo(oldPrice) != 0) {
-         NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, price);
+         NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, oldPrice, price);
          display(String.format(this.locale, "Set %s (%s) price to %s for %tF.",
             security.getName(), security.getTickerSymbol(),
             priceFmt.format(price), priceDate));
@@ -157,8 +157,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       CurrencySnapshot currentSnapshot = ssList.getTodaysSnapshot();
 
       if (currentSnapshot != null) {
+         CurrencyType security = ssList.getSecurity();
          BigDecimal price = MdUtil.convRateToPrice(currentSnapshot.getRate());
-         MdUtil.validateCurrentUserRate(ssList.getSecurity(), price, currentSnapshot)
+         MdUtil.validateCurrentUserRate(security, price, currentSnapshot, this.locale)
                  .ifPresent(this::display);
       }
 
