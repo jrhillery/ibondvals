@@ -158,8 +158,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
       if (currentSnapshot != null) {
          CurrencyType security = ssList.getSecurity();
-         BigDecimal price = MdUtil.convRateToPrice(currentSnapshot.getRate());
-         MdUtil.validateCurrentUserRate(security, price, currentSnapshot, this.locale)
+         double rate = currentSnapshot.getRate();
+         BigDecimal price = MdUtil.convRateToPrice(rate);
+         MdUtil.validateCurrentUserRate(security, price, rate, this.locale)
                  .ifPresent(this::display);
       }
 
