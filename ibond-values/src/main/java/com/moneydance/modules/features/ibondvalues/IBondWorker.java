@@ -1,6 +1,5 @@
 package com.moneydance.modules.features.ibondvalues;
 
-import com.infinitekind.moneydance.model.Account;
 import com.infinitekind.moneydance.model.AccountBook;
 import com.infinitekind.moneydance.model.CurrencySnapshot;
 import com.infinitekind.moneydance.model.CurrencyTable;
@@ -17,10 +16,7 @@ import javax.swing.SwingWorker;
 import java.math.BigDecimal;
 import java.text.NumberFormat;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -104,17 +100,10 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     */
    private boolean haveShares(CurrencyType security) {
       String securityName = security.getName();
-      List<Account> invAccounts = MdUtil.getAccounts(this.book, INVESTMENT);
 
-      for (Account invAccount : invAccounts) {
-         Account securityAccount = MdUtil.getSubAccountByName(invAccount, securityName);
-
-         if (securityAccount != null && securityAccount.getUserBalance() != 0) {
-            return true;
-         }
-      } // end for each investment account
-
-      return false;
+      return MdUtil.getAccounts(this.book, INVESTMENT).parallelStream()
+         .anyMatch(invAccount -> MdUtil.getSubAccountByName(invAccount, securityName).stream()
+         .anyMatch(securityAccount -> securityAccount.getUserBalance() != 0));
    } // end haveShares(CurrencyType)
 
    /**
