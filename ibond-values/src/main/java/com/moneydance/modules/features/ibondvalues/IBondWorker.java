@@ -101,7 +101,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    private boolean haveShares(CurrencyType security) {
       String securityName = security.getName();
 
-      return MdUtil.getAccounts(this.book, INVESTMENT).parallelStream()
+      return MdUtil.getAccounts(this.book, INVESTMENT)
          .anyMatch(invAccount -> MdUtil.getSubAccountByName(invAccount, securityName).stream()
          .anyMatch(securityAccount -> securityAccount.getUserBalance() != 0));
    } // end haveShares(CurrencyType)
