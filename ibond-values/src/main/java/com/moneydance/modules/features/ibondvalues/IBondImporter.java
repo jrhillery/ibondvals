@@ -15,11 +15,7 @@ import java.net.URI;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
-import java.util.Iterator;
-import java.util.NavigableSet;
-import java.util.Properties;
-import java.util.Spliterator;
-import java.util.TreeMap;
+import java.util.*;
 
 import static java.math.MathContext.DECIMAL64;
 import static java.math.RoundingMode.HALF_EVEN;
@@ -197,14 +193,14 @@ public class IBondImporter {
       TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
 
       dataRowItr.forEachRemaining(row -> {
-         Cell iRateCell = getCellOfType(this.iRateCol, NUMBER, row);
-         Cell fRateCell = getCellOfType(this.fRateCol, NUMBER, row);
-         Cell sDateCell = getCellOfType(this.sDateCol, FORMULA, row);
+         Optional<Cell> iRateCell = getCellOfType(this.iRateCol, NUMBER, row);
+         Optional<Cell> fRateCell = getCellOfType(this.fRateCol, NUMBER, row);
+         Optional<Cell> sDateCell = getCellOfType(this.sDateCol, FORMULA, row);
 
-         if (iRateCell != null && fRateCell != null && sDateCell != null) {
-            BigDecimal inflateRate = getInterestRateClean(iRateCell);
-            BigDecimal fixedRate = getInterestRateClean(fRateCell);
-            LocalDate startDate = sDateCell.asDate().toLocalDate();
+         if (iRateCell.isPresent() && fRateCell.isPresent() && sDateCell.isPresent()) {
+            BigDecimal inflateRate = getInterestRateClean(iRateCell.get());
+            BigDecimal fixedRate = getInterestRateClean(fRateCell.get());
+            LocalDate startDate = sDateCell.get().asDate().toLocalDate();
             iBondRates.put(startDate, new IBondRateRec(inflateRate, fixedRate, startDate));
          }
       }); // end for each remaining row
@@ -218,13 +214,13 @@ public class IBondImporter {
     * @param colIndex column index to get
     * @param desiredType desired type of cell
     * @param row row containing cell
-    * @return cell with the desired type, otherwise null
+    * @return Optional cell with the desired type
     */
-   private static Cell getCellOfType(int colIndex, CellType desiredType, Row row) {
-      Cell cell = row.getCell(colIndex);
+   private static Optional<Cell> getCellOfType(int colIndex, CellType desiredType, Row row) {
+      Optional<Cell> cell = row.getOptionalCell(colIndex);
 
-      if (cell != null && cell.getType() != desiredType) {
-         cell = null;
+      if (cell.isPresent() && cell.get().getType() != desiredType) {
+         cell = Optional.empty();
       }
 
       return cell;
