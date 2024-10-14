@@ -48,6 +48,8 @@ public class IBondImporter {
    private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
    private static final int PRICE_DIGITS = 4;
    private static final int SEMIANNUAL_MONTHS = 6;
+   private static final int MONTHS_TO_LOSE = 3;
+   private static final int EARLY_YEARS = 5;
    private static final int RATE_SET_INTERVAL = 6; // months
    private static final DateTimeFormatter TICKER_DATE_FORMATTER =
       new DateTimeFormatterBuilder()
@@ -319,7 +321,7 @@ public class IBondImporter {
    } // end addNonCompoundingMonths(BigDecimal, BigDecimal, LocalDate, TreeMap<LocalDate, BigDecimal>)
 
    /**
-    * Lose some interest in the first years of I bond life.
+    * Lose some interest in the early years of I bond life.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     *
     * @param issueDate Date I bond was issued
@@ -328,12 +330,14 @@ public class IBondImporter {
    private static void loseInterestInFirstYears(
          LocalDate issueDate, TreeMap<LocalDate, BigDecimal> iBondPrices) {
 
-      if (iBondPrices.size() > 2) {
+      if (iBondPrices.size() >= MONTHS_TO_LOSE) {
          NavigableSet<LocalDate> iBondDates = iBondPrices.navigableKeySet();
          Iterator<LocalDate> current = iBondDates.descendingIterator();
          Iterator<LocalDate> threePrior = iBondDates.descendingIterator();
-         threePrior.next(); threePrior.next(); threePrior.next();
-         LocalDate year5Age = issueDate.withDayOfMonth(1).plusYears(5);
+
+         for (int i = 0; i < MONTHS_TO_LOSE; i++)
+            threePrior.next();
+         LocalDate year5Age = issueDate.withDayOfMonth(1).plusYears(EARLY_YEARS);
 
          while (threePrior.hasNext()) {
             LocalDate currentDate = current.next();
@@ -345,9 +349,8 @@ public class IBondImporter {
             }
          } // end while more prior months
 
-         iBondPrices.put(current.next(), BigDecimal.ONE);
-         iBondPrices.put(current.next(), BigDecimal.ONE);
-         iBondPrices.put(current.next(), BigDecimal.ONE);
+         for (int i = 0; i < MONTHS_TO_LOSE; i++)
+            iBondPrices.put(current.next(), BigDecimal.ONE);
       }
 
    } // end loseInterestInFirstYears(LocalDate, TreeMap<LocalDate, BigDecimal>)
