@@ -206,7 +206,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                   + IBOND_TICKER_PREFIX.toUpperCase() + "202212, "
                   + IBOND_TICKER_PREFIX.toLowerCase() + "202304");
          } else if (!isModified()) {
-            display("No new price data found.");
+            display("No new price history data found.");
          }
 
          return isModified();
