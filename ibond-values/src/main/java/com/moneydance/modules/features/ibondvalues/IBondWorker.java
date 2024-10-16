@@ -118,12 +118,12 @@ public class IBondWorker extends SwingWorker<Boolean, String>
            SnapshotList ssList, LocalDate priceDate, BigDecimal price, boolean current) {
       CurrencyType security = ssList.getSecurity();
       int priceDateInt = MdUtil.convLocalToDateInt(priceDate);
-      CurrencySnapshot ss = ssList.getSnapshotForDate(priceDateInt);
-      BigDecimal oldPrice = ss == null ? BigDecimal.ONE
-         : MdUtil.convRateToPrice(ss.getRate());
+      Optional<CurrencySnapshot> snapshot = ssList.getSnapshotForDate(priceDateInt);
+      BigDecimal oldPrice = snapshot.map(SnapshotList::getPrice).orElse(BigDecimal.ONE);
 
       // store this quote if it differs
-      if (ss == null || priceDateInt != ss.getDateInt() || price.compareTo(oldPrice) != 0) {
+      if (snapshot.isEmpty() || priceDateInt != snapshot.get().getDateInt()
+              || price.compareTo(oldPrice) != 0) {
          NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, oldPrice, price);
          display(String.format(this.locale, "Set %s (%s) price to %s for %tF.",
             security.getName(), security.getTickerSymbol(),
@@ -143,15 +143,14 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     * @param ssList The list of snapshots to use
     */
    private void validateTodaysPrice(SnapshotList ssList) {
-      CurrencySnapshot currentSnapshot = ssList.getTodaysSnapshot();
 
-      if (currentSnapshot != null) {
+      ssList.getTodaysSnapshot().ifPresent(currentSnapshot -> {
          CurrencyType security = ssList.getSecurity();
          double rate = currentSnapshot.getRate();
          BigDecimal price = MdUtil.convRateToPrice(rate);
          MdUtil.validateCurrentUserRate(security, price, rate, this.locale)
                  .ifPresent(this::display);
-      }
+      });
 
    } // end validateTodaysPrice(SnapshotList)
 
