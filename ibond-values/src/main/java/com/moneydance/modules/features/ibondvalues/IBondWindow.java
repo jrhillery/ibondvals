@@ -81,10 +81,7 @@ public class IBondWindow extends JFrame {
          // invoked when Commit is selected
          if (this.staged != null) {
             try {
-               String changeSummary = this.staged.commitChanges();
-
-               if (changeSummary != null)
-                  addText(changeSummary);
+               this.staged.commitChanges().ifPresent(this::addText);
                enableCommitButton(this.staged.isModified());
             } catch (Exception e) {
                addText(e.toString());

@@ -72,16 +72,16 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    /**
     * Commit any changes to Moneydance.
     *
-    * @return A summary of the changes committed
+    * @return Optional summary of the changes committed
     */
-   public String commitChanges() {
+   public Optional<String> commitChanges() {
       int numPricesSet = this.priceChanges.size();
 
       this.priceChanges.forEach(SecurityHandler::applyUpdate);
       this.priceChanges.clear();
 
-      return String.format(this.locale,
-         "Recorded %d security price%s.", numPricesSet, numPricesSet == 1 ? "" : "s");
+      return Optional.of(String.format(this.locale,
+         "Recorded %d security price%s.", numPricesSet, numPricesSet == 1 ? "" : "s"));
    } // end commitChanges()
 
    /**
