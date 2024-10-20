@@ -97,7 +97,7 @@ public class IBondWindow extends JFrame {
     * Read in and set our icon image.
    */
    private void readIconImage() {
-      setIconImage(HTMLPane.readResourceImage("eyes_icon.png", getClass()));
+      HTMLPane.readResourceImage("eyes_icon.png", getClass()).ifPresent(this::setIconImage);
 
    } // end readIconImage()
 
