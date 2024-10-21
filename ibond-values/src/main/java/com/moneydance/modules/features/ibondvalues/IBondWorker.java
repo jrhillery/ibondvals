@@ -82,7 +82,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       this.priceChanges.clear();
 
       return Optional.of(String.format(this.locale,
-         "Recorded %d security price%s.", numPricesSet, numPricesSet == 1 ? "" : "s"));
+         "Recorded %d security price%s", numPricesSet, numPricesSet == 1 ? "" : "s"));
    } // end commitChanges()
 
    /**
@@ -126,7 +126,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       if (snapshot.isEmpty() || priceDateInt != snapshot.get().getDateInt()
               || price.compareTo(oldPrice) != 0) {
          NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, oldPrice, price);
-         display(String.format(this.locale, "Set %s (%s) price to %s for %tF.",
+         display(String.format(this.locale, "Set %s (%s) price to %s for %tF",
             security.getName(), security.getTickerSymbol(),
             priceFmt.format(price), priceDate));
          SecurityHandler sh = new SecurityHandler(ssList);
@@ -195,15 +195,15 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          } // end for each security
 
          if (!this.haveIBondSecurities) {
-            display("Unable to locate any security with an I bond ticker symbol.",
+            display("Unable to locate any security with an I bond ticker symbol",
                "Such ticker symbols should start with '" + IBOND_TICKER_PREFIX
                   + "' (in any case) followed by the<br>year followed by a 2 digit "
-                  + "month number in the format " + IBOND_TICKER_PREFIX + "YYYYMM.",
+                  + "month number in the format " + IBOND_TICKER_PREFIX + "YYYYMM",
                "Examples: " + IBOND_TICKER_PREFIX + "201901, "
                   + IBOND_TICKER_PREFIX.toUpperCase() + "202212, "
                   + IBOND_TICKER_PREFIX.toLowerCase() + "202304");
          } else if (!isModified()) {
-            display("No new price history data found.");
+            display("No new price history data found");
          }
 
          return isModified();

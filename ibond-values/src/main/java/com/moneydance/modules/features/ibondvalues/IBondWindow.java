@@ -106,6 +106,7 @@ public class IBondWindow extends JFrame {
     * @param text HTML-text to append to the output log text area
     */
    public void addText(String text) {
+      AppDebug.DEBUG.log(text);
       this.pnOutputLog.addText(text);
 
    } // end addText(String)
