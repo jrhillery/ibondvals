@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.*;
+import java.util.function.Consumer;
 
 import static java.math.MathContext.DECIMAL64;
 import static java.math.RoundingMode.HALF_EVEN;
@@ -269,14 +270,11 @@ public class IBondImporter {
     * <a href="https://www.treasurydirect.gov/savings-bonds/i-bonds/i-bonds-interest-rates">
     *    TreasuryDirect website</a> for details.
     *
-    * @param fixedRate Fixed interest rate
+    * @param fixedRate     Fixed interest rate
     * @param inflationRate Semiannual inflation interest rate
-    * @param issueDate Date I bond was issued
-    * @param month Starting date of month for which the interest rate is being composed
     * @return Composite interest rate
     */
-   private static BigDecimal combineRate(BigDecimal fixedRate, BigDecimal inflationRate,
-                                         LocalDate issueDate, LocalDate month) {
+   private static BigDecimal combineRate(BigDecimal fixedRate, BigDecimal inflationRate) {
       BigDecimal compositeRate =
          fixedRate.add(BigDecimal.TWO).multiply(inflationRate).add(fixedRate);
 
@@ -286,9 +284,6 @@ public class IBondImporter {
 
       // Round composite rate to the fourth place past the decimal point
       compositeRate = compositeRate.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
-
-      System.err.format("For I bonds issued %tF, starting %tF composite rate=%s%%%n",
-         issueDate, month, compositeRate.scaleByPowerOfTen(2));
 
       return compositeRate;
    } // end composeRate(BigDecimal, BigDecimal, LocalDate, LocalDate)
@@ -355,12 +350,13 @@ public class IBondImporter {
     * Make a list of I bond prices for each month for which interest rates are known.
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
+    * @param displayRates Lambda to consume interest rate messages
     * @return Mapping from dates to I bond prices
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
-    * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
+    * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public TreeMap<LocalDate, BigDecimal> getIBondPrices(String tickerSymbol)
-         throws MduExcepcionito, MduException {
+   public TreeMap<LocalDate, BigDecimal> getIBondPrices(
+           String tickerSymbol, Consumer<String> displayRates) throws MduExcepcionito, MduException {
       TreeMap<LocalDate, BigDecimal> iBondPrices = new TreeMap<>();
       LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate month = issueDate.withDayOfMonth(1);
@@ -371,7 +367,9 @@ public class IBondImporter {
 
       while (month.isBefore(firstUnknownDate)) {
          BigDecimal inflateRate = getRateForMonth(month, tickerSymbol).inflationRate();
-         BigDecimal compositeRate = combineRate(fixedRate, inflateRate, issueDate, month);
+         BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
+         displayRates.accept("For I bonds issued %tF, starting %tF composite rate is %s%%"
+                 .formatted(issueDate, month, compositeRate.scaleByPowerOfTen(2)));
          addNonCompoundingMonths(iBondPrice, compositeRate, month, iBondPrices);
 
          BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, DECIMAL64);
@@ -388,12 +386,13 @@ public class IBondImporter {
       loseInterestInFirstYears(issueDate, iBondPrices);
 
       return iBondPrices;
-   } // end getIBondPrices(String)
+   } // end getIBondPrices(String, Consumer<String>)
 
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         TreeMap<LocalDate, BigDecimal> iBondPrices = importer.getIBondPrices("IBond201901");
+         TreeMap<LocalDate, BigDecimal> iBondPrices =
+                 importer.getIBondPrices("IBond201901", System.out::println);
          BigDecimal shares = BigDecimal.valueOf(25);
 
          iBondPrices.forEach((date, price) ->

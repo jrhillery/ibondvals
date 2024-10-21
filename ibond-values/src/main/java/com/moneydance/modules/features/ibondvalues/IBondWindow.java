@@ -1,5 +1,6 @@
 package com.moneydance.modules.features.ibondvalues;
 
+import com.infinitekind.util.AppDebug;
 import com.leastlogic.moneydance.util.MdStorageUtil;
 import com.leastlogic.moneydance.util.StagedInterface;
 import com.leastlogic.swing.util.AwtScreenUtil;
@@ -86,7 +87,7 @@ public class IBondWindow extends JFrame {
             } catch (Exception e) {
                addText(e.toString());
                enableCommitButton(false);
-               e.printStackTrace(System.err);
+               AppDebug.ALL.log("Problem committing changes", e);
             }
          }
       }); // end btnCommit.addActionListener
@@ -184,7 +185,7 @@ public class IBondWindow extends JFrame {
          try {
             this.closeableResources.removeFirst().close();
          } catch (Exception e) {
-            e.printStackTrace(System.err);
+            AppDebug.ALL.log("Problem closing resource", e);
          }
       }
 

@@ -4,6 +4,7 @@ import com.infinitekind.moneydance.model.AccountBook;
 import com.infinitekind.moneydance.model.CurrencySnapshot;
 import com.infinitekind.moneydance.model.CurrencyTable;
 import com.infinitekind.moneydance.model.CurrencyType;
+import com.infinitekind.util.AppDebug;
 import com.leastlogic.moneydance.util.MdUtil;
 import com.leastlogic.moneydance.util.MduExcepcionito;
 import com.leastlogic.moneydance.util.MduException;
@@ -164,7 +165,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          try {
             SnapshotList ssList = new SnapshotList(security);
             validateTodaysPrice(ssList);
-            TreeMap<LocalDate, BigDecimal> prices = this.importer.getIBondPrices(ticker);
+            TreeMap<LocalDate, BigDecimal> prices =
+                    this.importer.getIBondPrices(ticker, AppDebug.DEBUG::log);
             LocalDate priceDateForToday = prices.floorKey(this.today);
 
             prices.forEach((date, price) ->
@@ -207,7 +209,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          return isModified();
       } catch (Throwable e) {
          display(e.toString());
-         e.printStackTrace(System.err);
+         AppDebug.ALL.log("Problem running %s".formatted(this.extensionName), e);
 
          return false;
       } finally {
@@ -226,7 +228,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          // ignore
       } catch (Exception e) {
          this.iBondWindow.addText(e.toString());
-         e.printStackTrace(System.err);
+         AppDebug.ALL.log("Problem enabling commit button", e);
       }
 
    } // end done()
@@ -275,8 +277,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     */
    public void close() {
       if (getState() != StateValue.DONE) {
-         System.err.format(this.locale,
-            "Cancelling running %s invocation.%n", this.extensionName);
+         AppDebug.ALL.log("Cancelling running %s invocation".formatted(this.extensionName));
          cancel(false);
 
          // wait for prior worker to complete

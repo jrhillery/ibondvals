@@ -21,9 +21,11 @@ http://jakarta.apache.org/ant/index.html
 
   <path id="classpath">
     <fileset dir="${fastexcel.lib}" includes="*.jar"/>
-    <pathelement location="${moneydance.runtime}/lib/gson-2.10.1.jar"/>
     <pathelement location="${moneydance.devkit}/lib/extadmin.jar"/>
     <pathelement location="${moneydance.devkit}/lib/moneydance-dev.jar"/>
+    <pathelement location="${moneydance.runtime}/lib/gson-2.10.1.jar"/>
+    <pathelement location="${moneydance.runtime}/lib/moneydance.jar"/> <!-- AppDebug is here -->
+    <pathelement location="${moneydance.runtime}/lib/kotlin-stdlib-1.9.20.jar"/> <!-- AppDebug seems to need this -->
   </path>
 
   <target name="init">
