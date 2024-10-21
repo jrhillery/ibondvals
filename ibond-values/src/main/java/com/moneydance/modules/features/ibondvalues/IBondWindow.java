@@ -85,9 +85,9 @@ public class IBondWindow extends JFrame {
                this.staged.commitChanges().ifPresent(this::addText);
                enableCommitButton(this.staged.isModified());
             } catch (Exception e) {
+               AppDebug.ALL.log("Problem committing changes", e);
                addText(e.toString());
                enableCommitButton(false);
-               AppDebug.ALL.log("Problem committing changes", e);
             }
          }
       }); // end btnCommit.addActionListener

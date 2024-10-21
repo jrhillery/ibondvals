@@ -208,8 +208,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
          return isModified();
       } catch (Throwable e) {
-         display(e.toString());
          AppDebug.ALL.log("Problem running %s".formatted(this.extensionName), e);
+         display(e.toString());
 
          return false;
       } finally {
@@ -227,8 +227,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       } catch (CancellationException e) {
          // ignore
       } catch (Exception e) {
-         this.iBondWindow.addText(e.toString());
          AppDebug.ALL.log("Problem enabling commit button", e);
+         this.iBondWindow.addText(e.toString());
       }
 
    } // end done()

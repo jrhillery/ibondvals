@@ -46,9 +46,9 @@ public class Main extends FeatureModule implements AutoCloseable {
    } // end invoke(String)
 
    private void handleException(Throwable e) {
+      AppDebug.ALL.log("Problem invoking %s".formatted(getName()), e);
       this.iBondWindow.addText(e.toString());
       this.iBondWindow.enableCommitButton(false);
-      AppDebug.ALL.log("Problem invoking %s".formatted(getName()), e);
 
    } // end handleException(Throwable)
 
