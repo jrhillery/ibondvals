@@ -3,6 +3,7 @@ package com.moneydance.modules.features.ibondvalues;
 import com.leastlogic.moneydance.util.MdUtil;
 import com.leastlogic.moneydance.util.MduExcepcionito;
 import com.leastlogic.moneydance.util.MduException;
+import kotlin.jvm.functions.Function0;
 import org.dhatim.fastexcel.reader.Cell;
 import org.dhatim.fastexcel.reader.CellType;
 import org.dhatim.fastexcel.reader.ReadableWorkbook;
@@ -350,13 +351,13 @@ public class IBondImporter {
     * Make a list of I bond prices for each month for which interest rates are known.
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
-    * @param displayRates Lambda to consume interest rate messages
+    * @param displayRates Consumer of interest rate message producer lambdas
     * @return Mapping from dates to I bond prices
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public TreeMap<LocalDate, BigDecimal> getIBondPrices(
-           String tickerSymbol, Consumer<String> displayRates) throws MduExcepcionito, MduException {
+   public TreeMap<LocalDate, BigDecimal> getIBondPrices(String tickerSymbol,
+         Consumer<Function0<String>> displayRates) throws MduExcepcionito, MduException {
       TreeMap<LocalDate, BigDecimal> iBondPrices = new TreeMap<>();
       LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate month = issueDate.withDayOfMonth(1);
@@ -366,11 +367,12 @@ public class IBondImporter {
       BigDecimal iBondPrice = BigDecimal.ONE;
 
       while (month.isBefore(firstUnknownDate)) {
-         BigDecimal inflateRate = getRateForMonth(month, tickerSymbol).inflationRate();
+         LocalDate curMonth = month;
+         BigDecimal inflateRate = getRateForMonth(curMonth, tickerSymbol).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
-         displayRates.accept("For I bonds issued %tF, starting %tF composite rate is %s%%"
-                 .formatted(issueDate, month, compositeRate.scaleByPowerOfTen(2)));
-         addNonCompoundingMonths(iBondPrice, compositeRate, month, iBondPrices);
+         displayRates.accept(() -> "For I bonds issued %tF, starting %tF composite rate is %s%%"
+                 .formatted(issueDate, curMonth, compositeRate.scaleByPowerOfTen(2)));
+         addNonCompoundingMonths(iBondPrice, compositeRate, curMonth, iBondPrices);
 
          BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, DECIMAL64);
          iBondPrice = iBondPrice.add(iBondPrice.multiply(semiannualRate, DECIMAL64));
@@ -386,13 +388,13 @@ public class IBondImporter {
       loseInterestInFirstYears(issueDate, iBondPrices);
 
       return iBondPrices;
-   } // end getIBondPrices(String, Consumer<String>)
+   } // end getIBondPrices(String, Consumer<Function0<String>>)
 
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
          TreeMap<LocalDate, BigDecimal> iBondPrices =
-                 importer.getIBondPrices("IBond201901", System.out::println);
+            importer.getIBondPrices("IBond201901", rates -> System.out.println(rates.invoke()));
          BigDecimal shares = BigDecimal.valueOf(25);
 
          iBondPrices.forEach((date, price) ->
