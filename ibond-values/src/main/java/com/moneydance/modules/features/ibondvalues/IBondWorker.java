@@ -4,13 +4,7 @@ import com.infinitekind.moneydance.model.AccountBook;
 import com.infinitekind.moneydance.model.CurrencySnapshot;
 import com.infinitekind.moneydance.model.CurrencyTable;
 import com.infinitekind.moneydance.model.CurrencyType;
-import com.infinitekind.util.AppDebug;
-import com.leastlogic.moneydance.util.MdUtil;
-import com.leastlogic.moneydance.util.MduExcepcionito;
-import com.leastlogic.moneydance.util.MduException;
-import com.leastlogic.moneydance.util.SecurityHandler;
-import com.leastlogic.moneydance.util.SnapshotList;
-import com.leastlogic.moneydance.util.StagedInterface;
+import com.leastlogic.moneydance.util.*;
 import com.moneydance.apps.md.controller.FeatureModuleContext;
 
 import javax.swing.SwingWorker;
@@ -166,7 +160,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
             SnapshotList ssList = new SnapshotList(security);
             validateTodaysPrice(ssList);
             TreeMap<LocalDate, BigDecimal> prices =
-                    this.importer.getIBondPrices(ticker, AppDebug.DEBUG::log);
+                    this.importer.getIBondPrices(ticker, MdLog::debug);
             LocalDate priceDateForToday = prices.floorKey(this.today);
 
             prices.forEach((date, price) ->
@@ -208,7 +202,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
          return isModified();
       } catch (Throwable e) {
-         AppDebug.ALL.log("Problem running %s".formatted(this.extensionName), e);
+         MdLog.all("Problem running %s".formatted(this.extensionName), e);
          display(e.toString());
 
          return false;
@@ -227,7 +221,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       } catch (CancellationException e) {
          // ignore
       } catch (Exception e) {
-         AppDebug.ALL.log("Problem enabling commit button", e);
+         MdLog.all("Problem enabling commit button", e);
          this.iBondWindow.addText(e.toString());
       }
 
@@ -277,7 +271,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     */
    public void close() {
       if (getState() != StateValue.DONE) {
-         AppDebug.ALL.log("Cancelling running %s invocation".formatted(this.extensionName));
+         MdLog.all("Cancelling running %s invocation".formatted(this.extensionName));
          cancel(false);
 
          // wait for prior worker to complete

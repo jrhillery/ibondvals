@@ -1,6 +1,6 @@
 package com.moneydance.modules.features.ibondvalues;
 
-import com.infinitekind.util.AppDebug;
+import com.leastlogic.moneydance.util.MdLog;
 import com.moneydance.apps.md.controller.FeatureModule;
 
 /**
@@ -18,6 +18,7 @@ public class Main extends FeatureModule implements AutoCloseable {
     */
    public void init() {
       getContext().registerFeature(this, "do:i:bond:values", null, getName());
+      MdLog.setPrefix("IBVALS: ");
 
    } // end init()
 
@@ -27,7 +28,7 @@ public class Main extends FeatureModule implements AutoCloseable {
     * @see com.moneydance.apps.md.controller.FeatureModule#invoke(java.lang.String)
     */
    public void invoke(String uri) {
-      AppDebug.ALL.log("%s invoked with uri [%s]".formatted(getName(), uri));
+      MdLog.all("%s invoked with uri [%s]".formatted(getName(), uri));
 
       try {
          if (this.iBondWorker != null) {
@@ -46,7 +47,7 @@ public class Main extends FeatureModule implements AutoCloseable {
    } // end invoke(String)
 
    private void handleException(Throwable e) {
-      AppDebug.ALL.log("Problem invoking %s".formatted(getName()), e);
+      MdLog.all("Problem invoking %s".formatted(getName()), e);
       this.iBondWindow.addText(e.toString());
       this.iBondWindow.enableCommitButton(false);
 

@@ -3,7 +3,6 @@ package com.moneydance.modules.features.ibondvalues;
 import com.leastlogic.moneydance.util.MdUtil;
 import com.leastlogic.moneydance.util.MduExcepcionito;
 import com.leastlogic.moneydance.util.MduException;
-import kotlin.jvm.functions.Function0;
 import org.dhatim.fastexcel.reader.Cell;
 import org.dhatim.fastexcel.reader.CellType;
 import org.dhatim.fastexcel.reader.ReadableWorkbook;
@@ -18,6 +17,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 import static java.math.MathContext.DECIMAL64;
 import static java.math.RoundingMode.HALF_EVEN;
@@ -357,7 +357,7 @@ public class IBondImporter {
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
    public TreeMap<LocalDate, BigDecimal> getIBondPrices(String tickerSymbol,
-         Consumer<Function0<String>> displayRates) throws MduExcepcionito, MduException {
+         Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
       TreeMap<LocalDate, BigDecimal> iBondPrices = new TreeMap<>();
       LocalDate issueDate = getDateForTicker(tickerSymbol);
       LocalDate month = issueDate.withDayOfMonth(1);
@@ -388,13 +388,13 @@ public class IBondImporter {
       loseInterestInFirstYears(issueDate, iBondPrices);
 
       return iBondPrices;
-   } // end getIBondPrices(String, Consumer<Function0<String>>)
+   } // end getIBondPrices(String, Consumer<Supplier<String>>)
 
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
          TreeMap<LocalDate, BigDecimal> iBondPrices =
-            importer.getIBondPrices("IBond201901", rates -> System.out.println(rates.invoke()));
+            importer.getIBondPrices("IBond201901", rates -> System.out.println(rates.get()));
          BigDecimal shares = BigDecimal.valueOf(25);
 
          iBondPrices.forEach((date, price) ->
