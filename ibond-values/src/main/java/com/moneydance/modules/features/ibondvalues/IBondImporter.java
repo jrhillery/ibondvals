@@ -247,11 +247,11 @@ public class IBondImporter {
    /**
     * Find the Series I savings bond interest rate history data for a given month.
     *
-    * @param month Any date in month for which to return I bond rate record
+    * @param month        Any date in month for which to return I bond rate record
     * @param tickerSymbol Ticker symbol
     * @return Corresponding I bond rate record
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
-    * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
+    * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
    private IBondRateRec getRateForMonth(LocalDate month, String tickerSymbol)
          throws MduExcepcionito, MduException {
@@ -287,7 +287,7 @@ public class IBondImporter {
       compositeRate = compositeRate.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
 
       return compositeRate;
-   } // end composeRate(BigDecimal, BigDecimal, LocalDate, LocalDate)
+   } // end combineRate(BigDecimal, BigDecimal)
 
    /**
     * Add I bond prices for months that do not compound to a specified list.
