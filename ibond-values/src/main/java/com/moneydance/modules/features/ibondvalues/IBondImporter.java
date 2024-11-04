@@ -290,7 +290,7 @@ public class IBondImporter {
    } // end combineRate(BigDecimal, BigDecimal)
 
    /**
-    * Add I bond prices for months that do not compound to a specified list.
+    * Add I bond prices for months that do not compound to a specified map.
     *
     * @param iBondPrice Initial I bond price
     * @param compositeRate Composite interest rate to use
