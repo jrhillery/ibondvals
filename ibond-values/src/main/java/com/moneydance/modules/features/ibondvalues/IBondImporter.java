@@ -13,10 +13,12 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.math.MathContext.DECIMAL64;
@@ -44,11 +46,9 @@ public class IBondImporter {
 
    private static final int INTEREST_RATE_DIGITS = 4;
    private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
-   private static final int PRICE_DIGITS = 4;
    private static final int SEMIANNUAL_MONTHS = 6;
    private static final int MONTHS_TO_LOSE = 3;
    private static final int EARLY_YEARS = 5;
-   private static final int RATE_SET_INTERVAL = 6; // months
    private static final DateTimeFormatter TICKER_DATE_FORMATTER =
       new DateTimeFormatterBuilder()
          .parseCaseInsensitive()
@@ -234,7 +234,7 @@ public class IBondImporter {
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
     * @return Date corresponding to the first day of the issue month
     */
-   private static LocalDate getDateForTicker(String tickerSymbol) throws MduExcepcionito {
+   public static LocalDate getDateForTicker(String tickerSymbol) throws MduExcepcionito {
       try {
 
          return LocalDate.parse(tickerSymbol, TICKER_DATE_FORMATTER);
@@ -290,115 +290,108 @@ public class IBondImporter {
    } // end combineRate(BigDecimal, BigDecimal)
 
    /**
-    * Add I bond prices for months that do not compound to a specified map.
+    * Add I bond interest payments for months that do not compound to a specified list.
     *
-    * @param iBondPrice Initial I bond price
-    * @param compositeRate Composite interest rate to use
-    * @param month Initial month's starting date
-    * @param iBondPrices Mapping from dates to I bond prices to which I bond prices are added
+    * @param compositeRate      Composite interest rate to use
+    * @param finalBal           Final balance in initial month
+    * @param month              Initial month
+    * @param iBondIntTxns       List of interest payment transactions
+    * @param redemptionForMonth Function providing redemption total for a month
+    * @return Final balance in ending month
     */
-   private static void addNonCompoundingMonths(
-         BigDecimal iBondPrice, BigDecimal compositeRate,
-         LocalDate month, TreeMap<LocalDate, BigDecimal> iBondPrices) {
+   private static BigDecimal addNonCompoundingMonths(BigDecimal compositeRate,
+         BigDecimal finalBal, YearMonth month, List<InterestTxnRec> iBondIntTxns,
+         Function<YearMonth, BigDecimal> redemptionForMonth) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
-      BigDecimal monthAccrual = iBondPrice.multiply(monthlyRate, DECIMAL64);
-      BigDecimal accrual = iBondPrice;
+      BigDecimal eligibleBal = finalBal;
 
-      for (int m = 1; m < SEMIANNUAL_MONTHS; ++m) {
-         accrual = accrual.add(monthAccrual);
+      for (int m = 0; m < SEMIANNUAL_MONTHS; ++m) {
+         BigDecimal interest = eligibleBal.multiply(monthlyRate).setScale(2, HALF_EVEN);
+         String memo = "%tb %<tY interest".formatted(month);
          month = month.plusMonths(1);
-         iBondPrices.put(month, accrual.setScale(PRICE_DIGITS, HALF_EVEN));
+         BigDecimal startingBal = finalBal.add(interest);
+         iBondIntTxns.add(new InterestTxnRec(month.atDay(1), interest, memo, startingBal));
+
+         BigDecimal redemption = redemptionForMonth.apply(month);
+         eligibleBal = eligibleBal.multiply(
+            BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64);
+         finalBal = startingBal.add(redemption);
       } // end for non-compounding months
 
-   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, LocalDate, TreeMap<LocalDate, BigDecimal>)
+      return finalBal;
+   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, YearMonth, List, Function)
 
    /**
     * Lose some interest in the early years of I bond life.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     *
-    * @param issueDate Date I bond was issued
-    * @param iBondPrices Mapping from dates to I bond prices
+    * @param issueDate    Date I bond was issued
+    * @param iBondIntTxns List of interest payment transactions
     */
-   private static void loseInterestInFirstYears(
-         LocalDate issueDate, TreeMap<LocalDate, BigDecimal> iBondPrices) {
+   private void deferInterestInFirstYears(YearMonth issueDate,
+         List<InterestTxnRec> iBondIntTxns) {
+      LocalDate year5Age = issueDate.plusYears(EARLY_YEARS).atDay(1);
 
-      if (iBondPrices.size() >= MONTHS_TO_LOSE) {
-         NavigableSet<LocalDate> iBondDates = iBondPrices.navigableKeySet();
-         Iterator<LocalDate> current = iBondDates.descendingIterator();
-         Iterator<LocalDate> threePrior = iBondDates.descendingIterator();
+      iBondIntTxns.forEach(iTxnRec -> {
+         if (iTxnRec.payDate().isBefore(year5Age)) {
+            iTxnRec.deferPayment(MONTHS_TO_LOSE, year5Age);
+         }
+      });
+      LocalDate today = LocalDate.now();
 
-         for (int i = 0; i < MONTHS_TO_LOSE; i++)
-            threePrior.next();
-         LocalDate year5Age = issueDate.withDayOfMonth(1).plusYears(EARLY_YEARS);
+      iBondIntTxns.removeIf(iTxnRec -> iTxnRec.payDate().isAfter(today));
 
-         while (threePrior.hasNext()) {
-            LocalDate currentDate = current.next();
-            LocalDate threePriorDate = threePrior.next();
-
-            if (currentDate.isBefore(year5Age)) {
-               // overwrite price with one from 3 months earlier
-               iBondPrices.put(currentDate, iBondPrices.get(threePriorDate));
-            }
-         } // end while more prior months
-
-         for (int i = 0; i < MONTHS_TO_LOSE; i++)
-            iBondPrices.put(current.next(), BigDecimal.ONE);
-      }
-
-   } // end loseInterestInFirstYears(LocalDate, TreeMap<LocalDate, BigDecimal>)
+   } // end deferInterestInFirstYears(YearMonth, List<InterestTxnRec>)
 
    /**
-    * Make a list of I bond prices for each month for which interest rates are known.
+    * Calculate Series I savings bond interest payment transactions.
     *
-    * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
-    * @param displayRates Consumer of interest rate message producer lambdas
-    * @return Mapping from dates to I bond prices
+    * @param tickerSymbol       Ticker symbol in the format IBondYYYYMM
+    * @param month0FinalBal     Final balance in month issued
+    * @param redemptionForMonth Function providing redemption total for a month
+    * @param displayRates       Consumer of interest rate message producer lambdas
+    * @return List of interest payment transactions
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public TreeMap<LocalDate, BigDecimal> getIBondPrices(String tickerSymbol,
+   public List<InterestTxnRec> getIBondInterestTxns(String tickerSymbol,
+         BigDecimal month0FinalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
-      TreeMap<LocalDate, BigDecimal> iBondPrices = new TreeMap<>();
-      LocalDate issueDate = getDateForTicker(tickerSymbol);
-      LocalDate month = issueDate.withDayOfMonth(1);
+      List<InterestTxnRec> iBondIntTxns = new ArrayList<>();
+      YearMonth issueDate = YearMonth.from(getDateForTicker(tickerSymbol));
+      YearMonth month = issueDate;
 
-      LocalDate firstUnknownDate = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
-      BigDecimal fixedRate = getRateForMonth(month, tickerSymbol).fixedRate();
-      BigDecimal iBondPrice = BigDecimal.ONE;
+      YearMonth thisMonth = YearMonth.now();
+      BigDecimal fixedRate = getRateForMonth(month.atDay(1), tickerSymbol).fixedRate();
+      BigDecimal finalBal = month0FinalBal;
 
-      while (month.isBefore(firstUnknownDate)) {
-         LocalDate curMonth = month;
-         BigDecimal inflateRate = getRateForMonth(curMonth, tickerSymbol).inflationRate();
+      while (month.isBefore(thisMonth)) {
+         final YearMonth curMonth = month;
+         BigDecimal inflateRate = getRateForMonth(curMonth.atDay(1), tickerSymbol).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
-         displayRates.accept(() -> "For I bonds issued %tF, starting %tF composite rate is %s%%"
-                 .formatted(issueDate, curMonth, compositeRate.scaleByPowerOfTen(2)));
-         addNonCompoundingMonths(iBondPrice, compositeRate, curMonth, iBondPrices);
+         displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
+            .formatted(issueDate, curMonth, compositeRate.scaleByPowerOfTen(2)));
+         finalBal = addNonCompoundingMonths(
+            compositeRate, finalBal, curMonth, iBondIntTxns, redemptionForMonth);
 
-         BigDecimal semiannualRate = compositeRate.divide(BigDecimal.TWO, DECIMAL64);
-         iBondPrice = iBondPrice.add(iBondPrice.multiply(semiannualRate, DECIMAL64));
-         month = month.plusMonths(SEMIANNUAL_MONTHS);
-         iBondPrices.put(month, iBondPrice.setScale(PRICE_DIGITS, HALF_EVEN));
-      } // end while semiannual compounding periods
+         month = curMonth.plusMonths(SEMIANNUAL_MONTHS);
+      } // end while before, or on, today
 
-      if (iBondPrices.isEmpty())
-         throw new MduExcepcionito(null,
-            "No interest rates for I bonds issued as late as %tF (%s)",
-            issueDate, tickerSymbol);
+      deferInterestInFirstYears(issueDate, iBondIntTxns);
 
-      loseInterestInFirstYears(issueDate, iBondPrices);
-
-      return iBondPrices;
-   } // end getIBondPrices(String, Consumer<Supplier<String>>)
+      return iBondIntTxns;
+   } // end getIBondInterestTxns(String, BigDecimal, Function, Consumer)
 
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         TreeMap<LocalDate, BigDecimal> iBondPrices =
-            importer.getIBondPrices("IBond201901", rates -> System.out.println(rates.get()));
-         BigDecimal shares = BigDecimal.valueOf(25);
+         List<InterestTxnRec> iBondIntTxns = importer.getIBondInterestTxns("IBond202312",
+            BigDecimal.valueOf(10000), (month) -> BigDecimal.ZERO,
+            rates -> System.out.println(rates.get()));
 
-         iBondPrices.forEach((date, price) ->
-            System.out.format("Balance on %s = %s%n", date, shares.multiply(price)));
+         iBondIntTxns.forEach(ibIntTxn ->
+            System.out.format("On %s pay %s for %s, balance %s%n",
+            ibIntTxn.payDate(), ibIntTxn.payAmount(), ibIntTxn.memo(), ibIntTxn.startingBal()));
       } catch (Exception e) {
          throw new RuntimeException(e);
       }

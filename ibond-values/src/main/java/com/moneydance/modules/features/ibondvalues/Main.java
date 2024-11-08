@@ -4,7 +4,8 @@ import com.leastlogic.moneydance.util.MdLog;
 import com.moneydance.apps.md.controller.FeatureModule;
 
 /**
- * Module to pull I bond interest rates from a remote site and derive I bond securities prices.
+ * Module to pull I bond interest rates from a remote site
+ * and derive I bond securities interest payment transactions.
  */
 @SuppressWarnings("unused")
 public class Main extends FeatureModule implements AutoCloseable {

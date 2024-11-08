@@ -1,17 +1,15 @@
 package com.moneydance.modules.features.ibondvalues;
 
-import com.infinitekind.moneydance.model.AccountBook;
-import com.infinitekind.moneydance.model.CurrencySnapshot;
-import com.infinitekind.moneydance.model.CurrencyTable;
-import com.infinitekind.moneydance.model.CurrencyType;
+import com.infinitekind.moneydance.model.*;
 import com.leastlogic.moneydance.util.*;
 import com.moneydance.apps.md.controller.FeatureModuleContext;
 
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
-import java.text.NumberFormat;
-import java.time.LocalDate;
-import java.util.*;
+import java.time.YearMonth;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -22,16 +20,15 @@ import static com.leastlogic.moneydance.util.MdUtil.IBOND_TICKER_PREFIX;
 public class IBondWorker extends SwingWorker<Boolean, String>
       implements StagedInterface, AutoCloseable {
    private final IBondWindow iBondWindow;
-   private final Locale locale;
    private final String extensionName;
    private final IBondImporter importer;
    private final AccountBook book;
    private final CurrencyTable securities;
-   private final LocalDate today = LocalDate.now();
+   private final TransactionSet txnSet;
    private boolean haveIBondSecurities = false;
    private final CountDownLatch finishedLatch = new CountDownLatch(1);
 
-   private final List<SecurityHandler> priceChanges = new ArrayList<>();
+   private final List<TxnHandler> interestTransactions = new ArrayList<>();
 
    /**
     * Sole constructor.
@@ -44,25 +41,25 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                       FeatureModuleContext fmContext) throws MduException {
       super();
       this.iBondWindow = iBondWindow;
-      this.locale = iBondWindow.getLocale();
       this.extensionName = extensionName;
       this.importer = new IBondImporter();
       this.book = fmContext.getCurrentAccountBook();
       this.securities = this.book.getCurrencies();
+      this.txnSet = this.book.getTransactionSet();
       iBondWindow.setStaged(this);
       iBondWindow.addCloseableResource(this);
 
    } // end constructor
 
    /**
-    * Add a security handler to our collection.
+    * Add an interest payment transaction handler to our collection.
     *
-    * @param handler A deferred update security handler to store
+    * @param handler A deferred update interest payment transaction handler to store
     */
-   private void addHandler(SecurityHandler handler) {
-      this.priceChanges.add(handler);
+   private void addHandler(TxnHandler handler) {
+      this.interestTransactions.add(handler);
 
-   } // end addHandler(SecurityHandler)
+   } // end addHandler(TxnHandler)
 
    /**
     * Commit any changes to Moneydance.
@@ -70,13 +67,13 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     * @return Optional summary of the changes committed
     */
    public Optional<String> commitChanges() {
-      int numPricesSet = this.priceChanges.size();
+      int numInterestTxns = this.interestTransactions.size();
 
-      this.priceChanges.forEach(SecurityHandler::applyUpdate);
-      this.priceChanges.clear();
+      this.interestTransactions.forEach(TxnHandler::applyUpdate);
+      this.interestTransactions.clear();
 
-      return Optional.of(String.format(this.locale,
-         "Recorded %d security price%s", numPricesSet, numPricesSet == 1 ? "" : "s"));
+      return Optional.of("Recorded %d interest payment transaction%s"
+         .formatted(numInterestTxns, numInterestTxns == 1 ? "" : "s"));
    } // end commitChanges()
 
    /**
@@ -84,99 +81,102 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     */
    public boolean isModified() {
 
-      return !this.priceChanges.isEmpty();
+      return !this.interestTransactions.isEmpty();
    } // end isModified()
 
    /**
-    * Determine if a given security currently has shares in any investment account.
+    * Store a handler for a deferred transaction if it differs from Moneydance data.
     *
-    * @param security Moneydance security
-    * @return true when an investment account contains some shares
+    * @param investTxns List of investment transactions for this transaction's account
+    * @param txn        Interest payment transaction details
     */
-   private boolean haveShares(CurrencyType security) {
-      String securityName = security.getName();
+   private void storeInterestTxnIfDiff(InvestTxnList investTxns, InterestTxnRec txn) {
+      Account secAccount = investTxns.account();
+      Account investAccount = secAccount.getParentAccount();
 
-      return MdUtil.getAccounts(this.book, INVESTMENT)
-         .anyMatch(invAccount -> MdUtil.getSubAccountByName(invAccount, securityName).stream()
-         .anyMatch(securityAccount -> securityAccount.getUserBalance() != 0));
-   } // end haveShares(CurrencyType)
+      Optional<SplitTxn> divTxn = investTxns.getDivReinvestTxnForDate(txn.payDate());
 
-   /**
-    * Store a handler for a deferred price quote if it differs Moneydance data.
-    *
-    * @param ssList    Snapshot list to use
-    * @param priceDate Date for this price quote
-    * @param price     Security price for the specified date
-    * @param current   The price is current
-    */
-   private void storePriceQuoteIfDiff(
-           SnapshotList ssList, LocalDate priceDate, BigDecimal price, boolean current) {
-      CurrencyType security = ssList.getSecurity();
-      int priceDateInt = MdUtil.convLocalToDateInt(priceDate);
-      Optional<CurrencySnapshot> snapshot = ssList.getSnapshotForDate(priceDateInt);
-      BigDecimal oldPrice = snapshot.map(SnapshotList::getPrice).orElse(BigDecimal.ONE);
+      if (divTxn.isEmpty()) {
+         if (!this.isModified()) {
+            Account category = AccountUtil.getDefaultCategoryForAcct(investAccount);
+            display("Will use category %s (the default) for new interest payments in %s"
+               .formatted(category.getAccountName(), investAccount.getAccountName()));
+         }
+         // store a new transaction
+         display("On %tF %s:%s pay %s for %s, bal %.2f".formatted(txn.payDate(),
+            investAccount.getAccountName(), secAccount.getAccountName(),
+            txn.payAmount(), txn.memo(), txn.startingBal()));
 
-      // store this quote if it differs
-      if (snapshot.isEmpty() || priceDateInt != snapshot.get().getDateInt()
-              || price.compareTo(oldPrice) != 0) {
-         NumberFormat priceFmt = MdUtil.getCurrencyFormat(this.locale, oldPrice, price);
-         display(String.format(this.locale, "Set %s (%s) price to %s for %tF",
-            security.getName(), security.getTickerSymbol(),
-            priceFmt.format(price), priceDate));
-         SecurityHandler sh = new SecurityHandler(ssList);
+         addHandler(new TxnHandler(this.book, secAccount, txn));
+      } else {
+         // verify transaction information
+         BigDecimal oldAmount = MdUtil.getTxnAmount(divTxn.get());
 
-         if (!current)
-            sh.priceNotCurrent();
-         addHandler(sh.storeNewPrice(price.doubleValue(), priceDateInt));
+         if (txn.payAmount().compareTo(oldAmount) != 0) {
+            display("Found a different interest amount on %s %s:%s: have %s, imported %s for %s"
+               .formatted(txn.payDate(), investAccount.getAccountName(),
+               secAccount.getAccountName(), oldAmount, txn.payAmount(), txn.memo()));
+         }
       }
 
-   } // end storePriceQuoteIfDiff(SnapshotList, LocalDate, BigDecimal, boolean)
+   } // end storeInterestTxnIfDiff(InvestTxnList, InterestTxnRec)
 
    /**
-    * Validate the current price.
+    * Provide redemption total for a month
     *
-    * @param ssList The list of snapshots to use
+    * @param month   Month to total
+    * @param txnList List of investment transactions for a securities account
+    * @return Sum of redemptions in the given month
     */
-   private void validateTodaysPrice(SnapshotList ssList) {
+   private BigDecimal redemptionForMonth(@SuppressWarnings("unused") YearMonth month,
+                                         @SuppressWarnings("unused") InvestTxnList txnList) {
 
-      ssList.getTodaysSnapshot().ifPresent(currentSnapshot ->
-              MdUtil.getAndValidateCurrentSnapshotPrice(ssList.getSecurity(),
-                      currentSnapshot, this.locale, this::display));
-
-   } // end validateTodaysPrice(SnapshotList)
+      return BigDecimal.ZERO; // TODO
+   } // end redemptionForMonth(YearMonth, InvestTxnList)
 
    /**
     * Check if this security has a ticker symbol for Series I savings bonds and if shares
-    * exist in an investment account. If so, store any new prices for this security.
+    * exist in an investment account. If so, store any new interest payments for this security.
     *
     * @param security Moneydance security
     * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   private void storeNewIBondPrices(CurrencyType security) throws MduException {
+   private void storeNewIBondTxns(CurrencyType security) throws MduException {
       String ticker = security.getTickerSymbol();
+      String securityName = security.getName();
 
-      if (MdUtil.isIBondTickerPrefix(ticker) && haveShares(security)) {
+      if (MdUtil.isIBondTickerPrefix(ticker)) {
+         List<Account> securityAccounts = MdUtil.getAccounts(this.book, INVESTMENT)
+            .map(invAccount -> MdUtil.getSubAccountByName(invAccount, securityName))
+            .<Account>mapMulti(Optional::ifPresent).toList();
+
          try {
-            SnapshotList ssList = new SnapshotList(security);
-            validateTodaysPrice(ssList);
-            TreeMap<LocalDate, BigDecimal> prices =
-                    this.importer.getIBondPrices(ticker, MdLog::debug);
-            LocalDate priceDateForToday = prices.floorKey(this.today);
+            YearMonth issueMonth = YearMonth.from(IBondImporter.getDateForTicker(ticker));
 
-            prices.forEach((date, price) ->
-               storePriceQuoteIfDiff(ssList, date, price, date.equals(priceDateForToday)));
+            for (Account secAccount : securityAccounts) {
+               BigDecimal balance =
+                  MdUtil.getBalanceAsOf(this.book, secAccount, issueMonth.atEndOfMonth());
 
-            this.haveIBondSecurities = true;
+               if (balance.signum() > 0) {
+                  InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount);
+                  List<InterestTxnRec> txns = this.importer.getIBondInterestTxns(
+                     ticker, balance, month -> redemptionForMonth(month, txnList), MdLog::debug);
+
+                  txns.forEach(txn -> storeInterestTxnIfDiff(txnList, txn));
+
+                  this.haveIBondSecurities = true;
+               }
+            }
          } catch (MduExcepcionito e) {
             display(e.getLocalizedMessage());
          }
       }
 
-   } // end storeNewIBondPrices(CurrencyType)
+   } // end storeNewIBondTxns(CurrencyType)
 
    /**
-    * Long-running routine to pull I bond interest rates from a remote
-    * site and derive I bond securities prices. Runs on worker thread.
+    * Long-running routine to pull I bond interest rates from a remote site and
+    * derive I bond securities interest payment transactions. Runs on worker thread.
     *
     * @return true when changes have been detected
     */
@@ -185,7 +185,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          List<CurrencyType> securityList = this.securities.getAllCurrencies();
 
          for (CurrencyType security : securityList) {
-            storeNewIBondPrices(security);
+            storeNewIBondTxns(security);
          } // end for each security
 
          if (!this.haveIBondSecurities) {
@@ -197,7 +197,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                   + IBOND_TICKER_PREFIX.toUpperCase() + "202212, "
                   + IBOND_TICKER_PREFIX.toLowerCase() + "202304");
          } else if (!isModified()) {
-            display("No new price history data found");
+            display("No new interest payment data found");
          }
 
          return isModified();
