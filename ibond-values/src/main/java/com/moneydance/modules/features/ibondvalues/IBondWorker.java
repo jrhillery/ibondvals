@@ -151,7 +151,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
             .<Account>mapMulti(Optional::ifPresent).toList();
 
          try {
-            YearMonth issueMonth = YearMonth.from(IBondImporter.getDateForTicker(ticker));
+            YearMonth issueMonth = IBondImporter.getDateForTicker(ticker);
 
             for (Account secAccount : securityAccounts) {
                BigDecimal balance =

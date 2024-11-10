@@ -23,7 +23,6 @@ import java.util.function.Supplier;
 
 import static java.math.MathContext.DECIMAL64;
 import static java.math.RoundingMode.HALF_EVEN;
-import static java.time.temporal.ChronoField.DAY_OF_MONTH;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.YEAR;
 import static org.dhatim.fastexcel.reader.CellType.FORMULA;
@@ -49,13 +48,11 @@ public class IBondImporter {
    private static final int SEMIANNUAL_MONTHS = 6;
    private static final int MONTHS_TO_LOSE = 3;
    private static final int EARLY_YEARS = 5;
-   private static final DateTimeFormatter TICKER_DATE_FORMATTER =
-      new DateTimeFormatterBuilder()
-         .parseCaseInsensitive()
-         .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
-         .appendValue(YEAR)
-         .appendValue(MONTH_OF_YEAR, 2)
-         .parseDefaulting(DAY_OF_MONTH, 1).toFormatter();
+   private static final DateTimeFormatter TICKER_DATE_FORMATTER = new DateTimeFormatterBuilder()
+      .parseCaseInsensitive()
+      .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
+      .appendValue(YEAR)
+      .appendValue(MONTH_OF_YEAR, 2).toFormatter();
 
    /**
     * Data record to hold Series I savings bond interest rate history
@@ -229,15 +226,15 @@ public class IBondImporter {
    } // end getCellOfType(int, CellType, Row)
 
    /**
-    * Determine I bond issue date by parsing the ticker symbol.
+    * Determine I bond issue year and month by parsing the ticker symbol.
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
-    * @return Date corresponding to the first day of the issue month
+    * @return Year-month corresponding to the issue month
     */
-   public static LocalDate getDateForTicker(String tickerSymbol) throws MduExcepcionito {
+   public static YearMonth getDateForTicker(String tickerSymbol) throws MduExcepcionito {
       try {
 
-         return LocalDate.parse(tickerSymbol, TICKER_DATE_FORMATTER);
+         return YearMonth.parse(tickerSymbol, TICKER_DATE_FORMATTER);
       } catch (Exception e) {
          throw new MduExcepcionito(e, "Problem parsing date from ticker symbol; %s",
             e.getLocalizedMessage());
@@ -267,7 +264,7 @@ public class IBondImporter {
 
    /**
     * Compose the interest rate that will apply for the specified fixed and semiannual
-    * inflation interest rates using the rules for Series I saving bonds. See
+    * inflation interest rates using the rules for Series I savings bonds. See
     * <a href="https://www.treasurydirect.gov/savings-bonds/i-bonds/i-bonds-interest-rates">
     *    TreasuryDirect website</a> for details.
     *
@@ -325,12 +322,12 @@ public class IBondImporter {
     * Lose some interest in the early years of I bond life.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     *
-    * @param issueDate    Date I bond was issued
+    * @param issueMonth   Date I bond was issued
     * @param iBondIntTxns List of interest payment transactions
     */
-   private void deferInterestInFirstYears(YearMonth issueDate,
+   private void deferInterestInFirstYears(YearMonth issueMonth,
          List<InterestTxnRec> iBondIntTxns) {
-      LocalDate year5Age = issueDate.plusYears(EARLY_YEARS).atDay(1);
+      LocalDate year5Age = issueMonth.plusYears(EARLY_YEARS).atDay(1);
 
       iBondIntTxns.forEach(iTxnRec -> {
          if (iTxnRec.payDate().isBefore(year5Age)) {
@@ -358,8 +355,8 @@ public class IBondImporter {
          BigDecimal month0FinalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
       List<InterestTxnRec> iBondIntTxns = new ArrayList<>();
-      YearMonth issueDate = YearMonth.from(getDateForTicker(tickerSymbol));
-      YearMonth month = issueDate;
+      YearMonth issueMonth = getDateForTicker(tickerSymbol);
+      YearMonth month = issueMonth;
 
       YearMonth thisMonth = YearMonth.now();
       BigDecimal fixedRate = getRateForMonth(month.atDay(1), tickerSymbol).fixedRate();
@@ -370,14 +367,14 @@ public class IBondImporter {
          BigDecimal inflateRate = getRateForMonth(curMonth.atDay(1), tickerSymbol).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
-            .formatted(issueDate, curMonth, compositeRate.scaleByPowerOfTen(2)));
+            .formatted(issueMonth, curMonth, compositeRate.scaleByPowerOfTen(2)));
          finalBal = addNonCompoundingMonths(
             compositeRate, finalBal, curMonth, iBondIntTxns, redemptionForMonth);
 
          month = curMonth.plusMonths(SEMIANNUAL_MONTHS);
       } // end while before, or on, today
 
-      deferInterestInFirstYears(issueDate, iBondIntTxns);
+      deferInterestInFirstYears(issueMonth, iBondIntTxns);
 
       return iBondIntTxns;
    } // end getIBondInterestTxns(String, BigDecimal, Function, Consumer)
