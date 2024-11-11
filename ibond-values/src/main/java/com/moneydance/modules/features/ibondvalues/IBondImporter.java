@@ -13,6 +13,7 @@ import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
@@ -33,8 +34,8 @@ public class IBondImporter {
    /** Spreadsheet location */
    private URI iBondRateHistory = null;
    private Properties props = null;
-   /** Mapping from dates to historical I bond interest rates */
-   private TreeMap<LocalDate, IBondRateRec> iBondRates = null;
+   /** Mapping from months to historical I bond interest rates */
+   private TreeMap<YearMonth, IBondRateRec> iBondRates = null;
    /** Column index of semiannual inflation interest rates */
    private int iRateCol = -1;
    /** Column index of fixed interest rates */
@@ -61,10 +62,10 @@ public class IBondImporter {
     *
     * @param inflationRate Semiannual (1/2 year) inflation rate
     * @param fixedRate Fixed interest rate
-    * @param startDate Date the rates took effect
+    * @param startMonth Month the rates took effect
     */
    public record IBondRateRec(
-      BigDecimal inflationRate, BigDecimal fixedRate, LocalDate startDate) {
+      BigDecimal inflationRate, BigDecimal fixedRate, YearMonth startMonth) {
 
    } // end record IBondRateRec
 
@@ -141,12 +142,24 @@ public class IBondImporter {
    } // end getInterestRateClean(Cell)
 
    /**
+    * Retrieve a year and month value from a spreadsheet cell.
+    *
+    * @param cell Cell to interrogate
+    * @return Year-month value
+    */
+   private static YearMonth getMonthClean(Cell cell) {
+      LocalDateTime date = cell.asDate();
+
+      return YearMonth.of(date.getYear(), date.getMonthValue());
+   } // end getMonthClean(Cell)
+
+   /**
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
     *
-    * @return Mapping from dates to historical I bond interest rates
+    * @return Mapping from months to historical I bond interest rates
     * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public TreeMap<LocalDate, IBondRateRec> getIBondRates() throws MduException {
+   public TreeMap<YearMonth, IBondRateRec> getIBondRates() throws MduException {
       if (this.iBondRates == null) {
          Spliterator<Row> dataRowItr = getDataRowIterator();
          loadColumnIndexes(dataRowItr);
@@ -188,8 +201,8 @@ public class IBondImporter {
     * @param dataRowItr Row spliterator over the data sheet portion of the spreadsheet to use
     * @return Mapping from dates to historical I bond interest rates
     */
-   private TreeMap<LocalDate, IBondRateRec> getIBondRates(Spliterator<Row> dataRowItr) {
-      TreeMap<LocalDate, IBondRateRec> iBondRates = new TreeMap<>();
+   private TreeMap<YearMonth, IBondRateRec> getIBondRates(Spliterator<Row> dataRowItr) {
+      TreeMap<YearMonth, IBondRateRec> iBondRates = new TreeMap<>();
 
       dataRowItr.forEachRemaining(row -> {
          Optional<Cell> iRateCell = getCellOfType(this.iRateCol, NUMBER, row);
@@ -199,8 +212,8 @@ public class IBondImporter {
          if (iRateCell.isPresent() && fRateCell.isPresent() && sDateCell.isPresent()) {
             BigDecimal inflateRate = getInterestRateClean(iRateCell.get());
             BigDecimal fixedRate = getInterestRateClean(fRateCell.get());
-            LocalDate startDate = sDateCell.get().asDate().toLocalDate();
-            iBondRates.put(startDate, new IBondRateRec(inflateRate, fixedRate, startDate));
+            YearMonth startMonth = getMonthClean(sDateCell.get());
+            iBondRates.put(startMonth, new IBondRateRec(inflateRate, fixedRate, startMonth));
          }
       }); // end for each remaining row
 
@@ -244,23 +257,23 @@ public class IBondImporter {
    /**
     * Find the Series I savings bond interest rate history data for a given month.
     *
-    * @param month        Any date in month for which to return I bond rate record
+    * @param month        Month for which to return I bond rate record
     * @param tickerSymbol Ticker symbol
     * @return Corresponding I bond rate record
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   private IBondRateRec getRateForMonth(LocalDate month, String tickerSymbol)
+   private IBondRateRec getRateForMonth(YearMonth month, String tickerSymbol)
          throws MduExcepcionito, MduException {
-      LocalDate rateDate = getIBondRates().floorKey(month);
+      YearMonth rateMonth = getIBondRates().floorKey(month);
 
-      if (rateDate == null)
+      if (rateMonth == null)
          throw new MduExcepcionito(null,
             "No interest rates for I bonds issued as early as %tF (%s)",
             month, tickerSymbol);
 
-      return getIBondRates().get(rateDate);
-   } // end getRateForMonth(LocalDate, String)
+      return getIBondRates().get(rateMonth);
+   } // end getRateForMonth(YearMonth, String)
 
    /**
     * Compose the interest rate that will apply for the specified fixed and semiannual
@@ -359,12 +372,12 @@ public class IBondImporter {
       YearMonth month = issueMonth;
 
       YearMonth thisMonth = YearMonth.now();
-      BigDecimal fixedRate = getRateForMonth(month.atDay(1), tickerSymbol).fixedRate();
+      BigDecimal fixedRate = getRateForMonth(month, tickerSymbol).fixedRate();
       BigDecimal finalBal = month0FinalBal;
 
       while (month.isBefore(thisMonth)) {
          final YearMonth curMonth = month;
-         BigDecimal inflateRate = getRateForMonth(curMonth.atDay(1), tickerSymbol).inflationRate();
+         BigDecimal inflateRate = getRateForMonth(curMonth, tickerSymbol).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curMonth, compositeRate.scaleByPowerOfTen(2)));
