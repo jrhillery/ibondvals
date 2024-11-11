@@ -6,10 +6,9 @@ import com.moneydance.apps.md.controller.FeatureModuleContext;
 
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -143,30 +142,31 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     */
    private void storeNewIBondTxns(CurrencyType security) throws MduException {
       String ticker = security.getTickerSymbol();
-      String securityName = security.getName();
+      String secName = security.getName();
 
       if (MdUtil.isIBondTickerPrefix(ticker)) {
-         List<Account> securityAccounts = MdUtil.getAccounts(this.book, INVESTMENT)
-            .map(invAccount -> MdUtil.getSubAccountByName(invAccount, securityName))
-            .<Account>mapMulti(Optional::ifPresent).toList();
-
          try {
-            YearMonth issueMonth = IBondImporter.getDateForTicker(ticker);
+            LocalDate endOfIssueMonth = IBondImporter.getDateForTicker(ticker).atEndOfMonth();
+            Iterable<Account> invAccounts = MdUtil.getAccounts(this.book, INVESTMENT)::iterator;
 
-            for (Account secAccount : securityAccounts) {
-               BigDecimal balance =
-                  MdUtil.getBalanceAsOf(this.book, secAccount, issueMonth.atEndOfMonth());
+            for (Account invAccount : invAccounts) {
+               Optional<Account> secAccount = MdUtil.getSubAccountByName(invAccount, secName);
 
-               if (balance.signum() > 0) {
-                  InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount);
-                  List<InterestTxnRec> txns = this.importer.getIBondInterestTxns(
-                     ticker, balance, month -> redemptionForMonth(month, txnList), MdLog::debug);
+               if (secAccount.isPresent()) {
+                  BigDecimal balance =
+                     MdUtil.getBalanceAsOf(this.book, secAccount.get(), endOfIssueMonth);
 
-                  txns.forEach(txn -> storeInterestTxnIfDiff(txnList, txn));
+                  if (balance.signum() > 0) {
+                     InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
+                     List<InterestTxnRec> txns = this.importer.getIBondInterestTxns(ticker,
+                        balance, month -> redemptionForMonth(month, txnList), MdLog::debug);
 
-                  this.haveIBondSecurities = true;
+                     txns.forEach(txn -> storeInterestTxnIfDiff(txnList, txn));
+
+                     this.haveIBondSecurities = true;
+                  }
                }
-            }
+            } // for investment accounts
          } catch (MduExcepcionito e) {
             display(e.getLocalizedMessage());
          }
