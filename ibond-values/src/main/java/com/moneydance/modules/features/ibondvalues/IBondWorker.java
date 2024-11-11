@@ -93,7 +93,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       Account secAccount = investTxns.account();
       Account investAccount = secAccount.getParentAccount();
 
-      Optional<SplitTxn> divTxn = investTxns.getDivReinvestTxnForDate(txn.payDate());
+      Optional<SplitTxn> divTxn = investTxns.getMatchingDivReinvestTxn(txn);
 
       if (divTxn.isEmpty()) {
          if (!this.isModified()) {

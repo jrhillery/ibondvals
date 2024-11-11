@@ -38,16 +38,17 @@ public class InvestTxnList {
     } // end constructor
 
     /**
-     * @param date Desired transaction date
-     * @return Optional first dividend reinvest transaction on desired date
+     * @param txnRec Desired interest payment transaction details
+     * @return Optional first matching dividend reinvest destination side transaction
      */
-    public Optional<SplitTxn> getDivReinvestTxnForDate(LocalDate date) {
-        List<AbstractTxn> txns = this.transactions.get(date);
+    public Optional<SplitTxn> getMatchingDivReinvestTxn(InterestTxnRec txnRec) {
+        List<AbstractTxn> txns = this.transactions.get(txnRec.payDate());
 
         if (txns != null) {
             for (AbstractTxn txn : txns) {
                 if (txn.getParentTxn().getInvestTxnType() == DIVIDEND_REINVEST
-                        && txn instanceof SplitTxn) {
+                        && txn instanceof SplitTxn
+                        && txnRec.memo().equalsIgnoreCase(txn.getParentTxn().getMemo())) {
 
                     return Optional.of((SplitTxn) txn);
                 }
@@ -55,7 +56,7 @@ public class InvestTxnList {
         }
 
         return Optional.empty();
-    } // end getDivReinvestTxnForDate(LocalDate)
+    } // end getMatchingDivReinvestTxn(InterestTxnRec)
 
     /**
      * @return Moneydance security account for this transaction
