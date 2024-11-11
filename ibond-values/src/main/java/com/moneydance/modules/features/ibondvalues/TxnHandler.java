@@ -12,6 +12,7 @@ import static com.infinitekind.moneydance.model.InvestTxnType.DIVIDEND_REINVEST;
  */
 public class TxnHandler {
     private final AccountBook book;
+    private final Account investAccount;
     private final Account securityAccount;
     private final InterestTxnRec txnRec;
 
@@ -19,11 +20,13 @@ public class TxnHandler {
      * Sole constructor.
      *
      * @param book            The root account for all transactions
-     * @param securityAccount Investment sub-account for security generating interest
+     * @param investAccount   Investment account
+     * @param securityAccount Investment subaccount for security generating interest
      * @param txnRec          Interest payment transaction details
      */
-    public TxnHandler(AccountBook book, Account securityAccount, InterestTxnRec txnRec) {
+    public TxnHandler(AccountBook book, Account investAccount, Account securityAccount, InterestTxnRec txnRec) {
         this.book = book;
+        this.investAccount = investAccount;
         this.securityAccount = securityAccount;
         this.txnRec = txnRec;
 
@@ -45,11 +48,9 @@ public class TxnHandler {
      * investment account with splits for a category and a security.
      */
     public void applyUpdate() {
-        Account investAccount = this.securityAccount.getParentAccount();
-
         ParentTxn pTxn = new ParentTxn(this.book);
         pTxn.setEditingMode();
-        pTxn.setAccount(investAccount);
+        pTxn.setAccount(this.investAccount);
 
         InvestFields invFields = new InvestFields();
         invFields.txnType = DIVIDEND_REINVEST;
@@ -59,9 +60,9 @@ public class TxnHandler {
         invFields.memo = this.txnRec.memo();
         invFields.shares = asLong(this.txnRec.payAmount(), this.securityAccount);
         invFields.hasShares = true;
-        invFields.amount = asLong(this.txnRec.payAmount(), investAccount);
+        invFields.amount = asLong(this.txnRec.payAmount(), this.investAccount);
         invFields.hasAmount = true;
-        invFields.category = AccountUtil.getDefaultCategoryForAcct(investAccount);
+        invFields.category = AccountUtil.getDefaultCategoryForAcct(this.investAccount);
         invFields.hasCategory = true;
         invFields.price = 1.0;
         invFields.hasPrice = true;

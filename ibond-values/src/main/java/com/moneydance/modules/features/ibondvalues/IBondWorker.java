@@ -86,12 +86,13 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    /**
     * Store a handler for a deferred transaction if it differs from Moneydance data.
     *
-    * @param investTxns List of investment transactions for this transaction's account
-    * @param txn        Interest payment transaction details
+    * @param investAccount Investment account
+    * @param investTxns    List of investment transactions for this transaction's security account
+    * @param txn           Interest payment transaction details
     */
-   private void storeInterestTxnIfDiff(InvestTxnList investTxns, InterestTxnRec txn) {
+   private void storeInterestTxnIfDiff(
+         Account investAccount, InvestTxnList investTxns, InterestTxnRec txn) {
       Account secAccount = investTxns.account();
-      Account investAccount = secAccount.getParentAccount();
 
       Optional<SplitTxn> divTxn = investTxns.getMatchingDivReinvestTxn(txn);
 
@@ -106,7 +107,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
             investAccount.getAccountName(), secAccount.getAccountName(),
             txn.payAmount(), txn.memo(), txn.startingBal()));
 
-         addHandler(new TxnHandler(this.book, secAccount, txn));
+         addHandler(new TxnHandler(this.book, investAccount, secAccount, txn));
       } else {
          // verify transaction information
          BigDecimal oldAmount = MdUtil.getTxnAmount(divTxn.get());
@@ -118,7 +119,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          }
       }
 
-   } // end storeInterestTxnIfDiff(InvestTxnList, InterestTxnRec)
+   } // end storeInterestTxnIfDiff(Account, InvestTxnList, InterestTxnRec)
 
    /**
     * Provide redemption total for a month
@@ -161,7 +162,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                      List<InterestTxnRec> txns = this.importer.getIBondInterestTxns(ticker,
                         balance, month -> redemptionForMonth(month, txnList), MdLog::debug);
 
-                     txns.forEach(txn -> storeInterestTxnIfDiff(txnList, txn));
+                     txns.forEach(txn -> storeInterestTxnIfDiff(invAccount, txnList, txn));
 
                      this.haveIBondSecurities = true;
                   }
