@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 import static com.infinitekind.moneydance.model.Account.AccountType.INVESTMENT;
 import static com.leastlogic.moneydance.util.MdUtil.IBOND_TICKER_PREFIX;
@@ -86,12 +87,12 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    /**
     * Store a handler for a deferred transaction if it differs from Moneydance data.
     *
+    * @param txn           Interest payment transaction details
     * @param investAccount Investment account
     * @param investTxns    List of investment transactions for this transaction's security account
-    * @param txn           Interest payment transaction details
     */
    private void storeInterestTxnIfDiff(
-         Account investAccount, InvestTxnList investTxns, InterestTxnRec txn) {
+         InterestTxnRec txn, Account investAccount, InvestTxnList investTxns) {
       Account secAccount = investTxns.account();
 
       Optional<SplitTxn> divTxn = investTxns.getMatchingDivReinvestTxn(txn);
@@ -124,14 +125,28 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    /**
     * Provide redemption total for a month
     *
-    * @param month   Month to total
-    * @param txnList List of investment transactions for a securities account
+    * @param month         Month to total
+    * @param investAccount Investment account
+    * @param txnList       List of investment transactions for a securities account
     * @return Sum of redemptions in the given month
     */
-   private BigDecimal redemptionForMonth(@SuppressWarnings("unused") YearMonth month,
-                                         @SuppressWarnings("unused") InvestTxnList txnList) {
+   private BigDecimal redemptionForMonth(
+         YearMonth month, Account investAccount, InvestTxnList txnList) {
+      List<SplitTxn> redemptions = txnList.getRedemptionsForMonth(month);
 
-      return BigDecimal.ZERO; // TODO
+      long amountTotal = redemptions.stream().mapToLong(SplitTxn::getAmount).sum();
+      int decimalPlaces = investAccount.getCurrencyType().getDecimalPlaces();
+      BigDecimal redemptionTotal = BigDecimal.valueOf(amountTotal).movePointLeft(decimalPlaces);
+
+      if (!redemptions.isEmpty()) {
+         MdLog.debug(() -> redemptions.stream().map(txn -> "%s on %s"
+            .formatted(MdUtil.getTxnAmount(txn), MdUtil.convDateIntToLocal(txn.getDateInt())))
+            .collect(Collectors.joining("; ", "From %s:%s redeem "
+               .formatted(investAccount.getAccountName(), txnList.account().getAccountName()),
+               " => %s for the month".formatted(redemptionTotal))));
+      }
+
+      return redemptionTotal;
    } // end redemptionForMonth(YearMonth, InvestTxnList)
 
    /**
@@ -159,10 +174,11 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
                   if (balance.signum() > 0) {
                      InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
-                     List<InterestTxnRec> txns = this.importer.getIBondInterestTxns(ticker,
-                        balance, month -> redemptionForMonth(month, txnList), MdLog::debug);
+                     List<InterestTxnRec> txns =
+                        this.importer.getIBondInterestTxns(ticker, balance,
+                        month -> redemptionForMonth(month, invAccount, txnList), MdLog::debug);
 
-                     txns.forEach(txn -> storeInterestTxnIfDiff(invAccount, txnList, txn));
+                     txns.forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList));
 
                      this.haveIBondSecurities = true;
                   }

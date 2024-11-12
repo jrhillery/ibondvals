@@ -396,8 +396,11 @@ public class IBondImporter {
       try {
          IBondImporter importer = new IBondImporter();
          List<InterestTxnRec> iBondIntTxns = importer.getIBondInterestTxns("IBond202312",
-            BigDecimal.valueOf(10000), (month) -> BigDecimal.ZERO,
-            rates -> System.out.println(rates.get()));
+            BigDecimal.valueOf(10000), month -> switch (month.toString()) {
+               case "2024-07" -> new BigDecimal("-1221.00");
+               case "2024-11" -> new BigDecimal("-250.00");
+               default -> BigDecimal.ZERO;
+            }, rates -> System.out.println(rates.get()));
 
          iBondIntTxns.forEach(ibIntTxn ->
             System.out.format("On %s pay %s for %s, balance %s%n",
