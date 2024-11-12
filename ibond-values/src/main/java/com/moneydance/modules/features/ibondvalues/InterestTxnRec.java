@@ -61,4 +61,12 @@ public class InterestTxnRec {
 
     } // end deferPayment(int, LocalDate)
 
+    /**
+     * {@return a string representation of this instance}
+     */
+    public String toString() {
+
+        return "%s pay %s for %s".formatted(payDate(), payAmount(), memo());
+    }
+
 } // end class InterestTxnRec
