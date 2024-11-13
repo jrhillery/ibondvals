@@ -7,7 +7,7 @@ import java.time.LocalDate;
  * Data record to hold interest payment transaction details.
  */
 public class InterestTxnRec {
-    private LocalDate payDate;
+    private final LocalDate payDate;
     private final BigDecimal payAmount;
     private final String memo;
     private final BigDecimal startingBal;
@@ -15,17 +15,16 @@ public class InterestTxnRec {
     /**
      * Sole constructor.
      *
-     * @param payDate     Payment date
-     * @param payAmount   Payment amount
-     * @param memo        Payment memo
-     * @param startingBal Starting balance for month
+     * @param payDate   Payment date
+     * @param payAmount Payment amount
+     * @param memo      Payment memo
      */
-    public InterestTxnRec(
-            LocalDate payDate, BigDecimal payAmount, String memo, BigDecimal startingBal) {
+    public InterestTxnRec(LocalDate payDate, BigDecimal payAmount, String memo) {
         this.payDate = payDate;
         this.payAmount = payAmount;
         this.memo = memo;
-        this.startingBal = startingBal;
+        this.startingBal = null; // TODO
+
     } // end constructor
 
     /**
@@ -47,19 +46,6 @@ public class InterestTxnRec {
      * @return Starting balance for month
      */
     public BigDecimal startingBal() { return this.startingBal; }
-
-    /**
-     * Defer the payment transaction by the specified number of months.
-     *
-     * @param monthsToDefer Number of months to defer
-     * @param latest        Latest date for deferred payment
-     */
-    public void deferPayment(int monthsToDefer, LocalDate latest) {
-        LocalDate candidate = payDate().plusMonths(monthsToDefer);
-
-        this.payDate = candidate.isBefore(latest) ? candidate : latest;
-
-    } // end deferPayment(int, LocalDate)
 
     /**
      * {@return a string representation of this instance}

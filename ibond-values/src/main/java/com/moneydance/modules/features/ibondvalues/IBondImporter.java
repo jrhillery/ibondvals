@@ -301,16 +301,19 @@ public class IBondImporter {
 
    /**
     * Add I bond interest payments for months that do not compound to a specified list.
+    * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     *
     * @param compositeRate      Composite interest rate to use
     * @param finalBal           Final balance in initial month
     * @param month              Initial month
-    * @param iBondIntTxns       List of interest payment transactions
+    * @param year5Age           Date I bond stops losing the last 3 months of interest
+    * @param iBondIntTxns       Collection of interest payment transactions
     * @param redemptionForMonth Function providing redemption total for a month
     * @return Final balance in ending month
     */
    private static BigDecimal addNonCompoundingMonths(BigDecimal compositeRate,
-         BigDecimal finalBal, YearMonth month, List<InterestTxnRec> iBondIntTxns,
+         BigDecimal finalBal, YearMonth month, YearMonth year5Age,
+         TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns,
          Function<YearMonth, BigDecimal> redemptionForMonth) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
       BigDecimal eligibleBal = finalBal;
@@ -319,9 +322,20 @@ public class IBondImporter {
          BigDecimal interest = eligibleBal.multiply(monthlyRate).setScale(2, HALF_EVEN);
          String memo = "%tb %<tY interest".formatted(month);
          month = month.plusMonths(1);
-         BigDecimal startingBal = finalBal.add(interest);
-         iBondIntTxns.add(new InterestTxnRec(month.atDay(1), interest, memo, startingBal));
+         YearMonth payMonth = month;
 
+         if (payMonth.isBefore(year5Age)) {
+            YearMonth candidate = payMonth.plusMonths(MONTHS_TO_LOSE);
+            payMonth = candidate.isBefore(year5Age) ? candidate : year5Age;
+         }
+         iBondIntTxns.computeIfAbsent(payMonth, k -> new ArrayList<>())
+            .add(new InterestTxnRec(payMonth.atDay(1), interest, memo));
+
+         List<InterestTxnRec> curIntTxns = iBondIntTxns.get(month);
+         BigDecimal startingBal = (curIntTxns == null) ? finalBal : finalBal.add(curIntTxns
+            .stream().map(InterestTxnRec::payAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+
+         // Get redemption total for this month (zero or negative value)
          BigDecimal redemption = redemptionForMonth.apply(month);
          eligibleBal = eligibleBal.multiply(
             BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64);
@@ -329,29 +343,20 @@ public class IBondImporter {
       } // end for non-compounding months
 
       return finalBal;
-   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, YearMonth, List, Function)
+   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, YearMonth, YearMonth, TreeMap, Function)
 
    /**
-    * Lose some interest in the early years of I bond life.
-    * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
+    * Discard future transactions -- they would change if redemptions occur.
     *
-    * @param issueMonth   Date I bond was issued
-    * @param iBondIntTxns List of interest payment transactions
+    * @param iBondIntTxns Collection of interest payment transactions
     */
-   private void deferInterestInFirstYears(YearMonth issueMonth,
-         List<InterestTxnRec> iBondIntTxns) {
-      LocalDate year5Age = issueMonth.plusYears(EARLY_YEARS).atDay(1);
-
-      iBondIntTxns.forEach(iTxnRec -> {
-         if (iTxnRec.payDate().isBefore(year5Age)) {
-            iTxnRec.deferPayment(MONTHS_TO_LOSE, year5Age);
-         }
-      });
+   private void discardFutureTxns(TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns) {
       LocalDate today = LocalDate.now();
 
-      iBondIntTxns.removeIf(iTxnRec -> iTxnRec.payDate().isAfter(today));
+      iBondIntTxns.forEach((month, intTxns) -> intTxns
+         .removeIf(ibIntTxn -> ibIntTxn.payDate().isAfter(today)));
 
-   } // end deferInterestInFirstYears(YearMonth, List<InterestTxnRec>)
+   } // end discardFutureTxns(TreeMap)
 
    /**
     * Calculate Series I savings bond interest payment transactions.
@@ -360,15 +365,16 @@ public class IBondImporter {
     * @param month0FinalBal     Final balance in month issued
     * @param redemptionForMonth Function providing redemption total for a month
     * @param displayRates       Consumer of interest rate message producer lambdas
-    * @return List of interest payment transactions
+    * @return Collection of interest payment transactions
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public List<InterestTxnRec> getIBondInterestTxns(String tickerSymbol,
+   public TreeMap<YearMonth, List<InterestTxnRec>> getIBondInterestTxns(String tickerSymbol,
          BigDecimal month0FinalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
-      List<InterestTxnRec> iBondIntTxns = new ArrayList<>();
+      TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns = new TreeMap<>();
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
+      YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
       YearMonth month = issueMonth;
 
       YearMonth thisMonth = YearMonth.now();
@@ -382,12 +388,12 @@ public class IBondImporter {
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curMonth, compositeRate.scaleByPowerOfTen(2)));
          finalBal = addNonCompoundingMonths(
-            compositeRate, finalBal, curMonth, iBondIntTxns, redemptionForMonth);
+            compositeRate, finalBal, curMonth, year5Age, iBondIntTxns, redemptionForMonth);
 
          month = curMonth.plusMonths(SEMIANNUAL_MONTHS);
       } // end while before, or on, today
 
-      deferInterestInFirstYears(issueMonth, iBondIntTxns);
+      discardFutureTxns(iBondIntTxns);
 
       return iBondIntTxns;
    } // end getIBondInterestTxns(String, BigDecimal, Function, Consumer)
@@ -395,16 +401,17 @@ public class IBondImporter {
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         List<InterestTxnRec> iBondIntTxns = importer.getIBondInterestTxns("IBond202312",
+         TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns = importer.getIBondInterestTxns(
+            "IBond202312",
             BigDecimal.valueOf(10000), month -> switch (month.toString()) {
                case "2024-07" -> new BigDecimal("-1221.00");
                case "2024-11" -> new BigDecimal("-250.00");
                default -> BigDecimal.ZERO;
             }, rates -> System.out.println(rates.get()));
 
-         iBondIntTxns.forEach(ibIntTxn ->
+         iBondIntTxns.forEach((k, intTxns) -> intTxns.forEach(ibIntTxn ->
             System.out.format("On %s pay %s for %s, balance %s%n",
-            ibIntTxn.payDate(), ibIntTxn.payAmount(), ibIntTxn.memo(), ibIntTxn.startingBal()));
+            ibIntTxn.payDate(), ibIntTxn.payAmount(), ibIntTxn.memo(), ibIntTxn.startingBal())));
       } catch (Exception e) {
          throw new RuntimeException(e);
       }
