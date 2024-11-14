@@ -10,7 +10,7 @@ public class InterestTxnRec {
     private final LocalDate payDate;
     private final BigDecimal payAmount;
     private final String memo;
-    private final BigDecimal startingBal;
+    private BigDecimal endingBal = BigDecimal.ZERO;
 
     /**
      * Sole constructor.
@@ -23,7 +23,6 @@ public class InterestTxnRec {
         this.payDate = payDate;
         this.payAmount = payAmount;
         this.memo = memo;
-        this.startingBal = null; // TODO
 
     } // end constructor
 
@@ -43,9 +42,16 @@ public class InterestTxnRec {
     public String memo() { return this.memo; }
 
     /**
-     * @return Starting balance for month
+     * @return Ending balance for month
      */
-    public BigDecimal startingBal() { return this.startingBal; }
+    public BigDecimal endingBal() { return this.endingBal; }
+
+    /**
+     * Set the ending balance for month
+     *
+     * @param endingBal Ending balance to store
+     */
+    public void endingBal(BigDecimal endingBal) { this.endingBal = endingBal; }
 
     /**
      * {@return a string representation of this instance}

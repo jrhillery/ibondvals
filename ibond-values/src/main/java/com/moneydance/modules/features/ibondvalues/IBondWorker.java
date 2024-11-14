@@ -106,7 +106,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          // store a new transaction
          display("On %tF %s:%s pay %s for %s, bal %.2f".formatted(txn.payDate(),
             investAccount.getAccountName(), secAccount.getAccountName(),
-            txn.payAmount(), txn.memo(), txn.startingBal()));
+            txn.payAmount(), txn.memo(), txn.endingBal()));
 
          addHandler(new TxnHandler(this.book, investAccount, secAccount, txn));
       } else {
@@ -114,7 +114,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          BigDecimal oldAmount = MdUtil.getTxnAmount(divTxn.get());
 
          if (txn.payAmount().compareTo(oldAmount) != 0) {
-            display("Found a different interest amount on %s %s:%s: have %s, imported %s for %s"
+            display("Found a different interest amount on %s %s:%s: have %s, calculate %s for %s"
                .formatted(txn.payDate(), investAccount.getAccountName(),
                secAccount.getAccountName(), oldAmount, txn.payAmount(), txn.memo()));
          }

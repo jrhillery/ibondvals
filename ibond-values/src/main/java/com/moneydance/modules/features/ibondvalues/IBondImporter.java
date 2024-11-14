@@ -340,6 +340,12 @@ public class IBondImporter {
          eligibleBal = eligibleBal.multiply(
             BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64);
          finalBal = startingBal.add(redemption);
+
+         if (curIntTxns != null) {
+            for (InterestTxnRec txn : curIntTxns) {
+               txn.endingBal(finalBal);
+            }
+         }
       } // end for non-compounding months
 
       return finalBal;
@@ -404,14 +410,14 @@ public class IBondImporter {
          TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns = importer.getIBondInterestTxns(
             "IBond202312",
             BigDecimal.valueOf(10000), month -> switch (month.toString()) {
-               case "2024-07" -> new BigDecimal("-1221.00");
-               case "2024-11" -> new BigDecimal("-250.00");
+               case "2024-07" -> BigDecimal.ZERO; // new BigDecimal("-1221.00");
+               case "2024-11" -> BigDecimal.ZERO; // new BigDecimal("-250.00");
                default -> BigDecimal.ZERO;
             }, rates -> System.out.println(rates.get()));
 
          iBondIntTxns.forEach((k, intTxns) -> intTxns.forEach(ibIntTxn ->
             System.out.format("On %s pay %s for %s, balance %s%n",
-            ibIntTxn.payDate(), ibIntTxn.payAmount(), ibIntTxn.memo(), ibIntTxn.startingBal())));
+            ibIntTxn.payDate(), ibIntTxn.payAmount(), ibIntTxn.memo(), ibIntTxn.endingBal())));
       } catch (Exception e) {
          throw new RuntimeException(e);
       }
