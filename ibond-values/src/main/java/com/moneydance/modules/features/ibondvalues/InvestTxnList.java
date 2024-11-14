@@ -1,22 +1,24 @@
 package com.moneydance.modules.features.ibondvalues;
 
-import com.infinitekind.moneydance.model.*;
+import com.infinitekind.moneydance.model.AbstractTxn;
+import com.infinitekind.moneydance.model.Account;
+import com.infinitekind.moneydance.model.SplitTxn;
+import com.infinitekind.moneydance.model.TransactionSet;
 import com.leastlogic.moneydance.util.MdUtil;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.TreeMap;
 
 import static com.infinitekind.moneydance.model.InvestTxnType.DIVIDEND_REINVEST;
-import static com.infinitekind.moneydance.model.InvestTxnType.SELL;
-import static com.infinitekind.moneydance.model.InvestTxnType.SELL_XFER;
 
 /**
  * Utility class to house a list of investment transactions for a Moneydance security account.
  */
 public class InvestTxnList {
-    private static final EnumSet<InvestTxnType> REDEEM_TYPES = EnumSet.of(SELL, SELL_XFER);
-
     private final Account account;
     private final TreeMap<LocalDate, List<AbstractTxn>> transactions = new TreeMap<>();
 
@@ -66,7 +68,7 @@ public class InvestTxnList {
         this.transactions.subMap(month.atDay(1), true, month.atEndOfMonth(), true)
                 .forEach((date, txnList) -> txnList.forEach(txn -> {
 
-            if (REDEEM_TYPES.contains(txn.getParentTxn().getInvestTxnType())
+            if (txn.getParentTxn().getInvestTxnType() != DIVIDEND_REINVEST
                     && txn instanceof SplitTxn) {
                 txns.add((SplitTxn) txn);
             }
