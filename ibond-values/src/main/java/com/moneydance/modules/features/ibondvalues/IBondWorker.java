@@ -118,6 +118,13 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                .formatted(txn.payDate(), investAccount.getAccountName(),
                secAccount.getAccountName(), oldAmount, txn.payAmount(), txn.memo()));
          }
+         oldAmount = MdUtil.getBalanceAsOf(this.book, secAccount, txn.payMonth().atEndOfMonth());
+
+         if (txn.endingBal().compareTo(oldAmount) != 0) {
+            display("Found a different ending balance for %s in %s:%s: have %s, calculate %s"
+               .formatted(txn.payMonth(), investAccount.getAccountName(),
+               secAccount.getAccountName(), oldAmount, txn.endingBal()));
+         }
       }
 
    } // end storeInterestTxnIfDiff(Account, InvestTxnList, InterestTxnRec)

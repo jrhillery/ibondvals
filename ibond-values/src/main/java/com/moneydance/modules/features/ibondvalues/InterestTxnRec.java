@@ -2,11 +2,13 @@ package com.moneydance.modules.features.ibondvalues;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.YearMonth;
 
 /**
  * Data record to hold interest payment transaction details.
  */
 public class InterestTxnRec {
+    private final YearMonth payMonth;
     private final LocalDate payDate;
     private final BigDecimal payAmount;
     private final String memo;
@@ -15,34 +17,40 @@ public class InterestTxnRec {
     /**
      * Sole constructor.
      *
-     * @param payDate   Payment date
+     * @param payMonth  Payment month
      * @param payAmount Payment amount
      * @param memo      Payment memo
      */
-    public InterestTxnRec(LocalDate payDate, BigDecimal payAmount, String memo) {
-        this.payDate = payDate;
+    public InterestTxnRec(YearMonth payMonth, BigDecimal payAmount, String memo) {
+        this.payMonth = payMonth;
+        this.payDate = payMonth.atDay(1);
         this.payAmount = payAmount;
         this.memo = memo;
 
     } // end constructor
 
     /**
-     * @return Payment date
+     * {@return Payment month}
+     */
+    public YearMonth payMonth() { return this.payMonth; }
+
+    /**
+     * {@return Payment date}
      */
     public LocalDate payDate() { return this.payDate; }
 
     /**
-     * @return Payment amount
+     * {@return Payment amount}
      */
     public BigDecimal payAmount() { return this.payAmount; }
 
     /**
-     * @return Payment memo
+     * {@return Payment memo}
      */
     public String memo() { return this.memo; }
 
     /**
-     * @return Ending balance for month
+     * {@return Ending balance for month}
      */
     public BigDecimal endingBal() { return this.endingBal; }
 

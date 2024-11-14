@@ -12,7 +12,6 @@ import org.dhatim.fastexcel.reader.Sheet;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -329,7 +328,7 @@ public class IBondImporter {
             payMonth = candidate.isBefore(year5Age) ? candidate : year5Age;
          }
          iBondIntTxns.computeIfAbsent(payMonth, k -> new ArrayList<>())
-            .add(new InterestTxnRec(payMonth.atDay(1), interest, memo));
+            .add(new InterestTxnRec(payMonth, interest, memo));
 
          List<InterestTxnRec> curIntTxns = iBondIntTxns.get(month);
          BigDecimal startingBal = (curIntTxns == null) ? finalBal : finalBal.add(curIntTxns
@@ -357,10 +356,10 @@ public class IBondImporter {
     * @param iBondIntTxns Collection of interest payment transactions
     */
    private void discardFutureTxns(TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns) {
-      LocalDate today = LocalDate.now();
+      YearMonth thisMonth = YearMonth.now();
 
       iBondIntTxns.forEach((month, intTxns) -> intTxns
-         .removeIf(ibIntTxn -> ibIntTxn.payDate().isAfter(today)));
+         .removeIf(ibIntTxn -> ibIntTxn.payMonth().isAfter(thisMonth)));
 
    } // end discardFutureTxns(TreeMap)
 
