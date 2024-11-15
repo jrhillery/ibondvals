@@ -181,7 +181,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
                   if (balance.signum() > 0) {
                      InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
-                     CalcTxnList txns = this.importer.getIBondInterestTxns(ticker, balance,
+                     CalcTxnList txns = this.importer.calcIBondInterestTxns(ticker, balance,
                         month -> redemptionForMonth(month, invAccount, txnList), MdLog::debug);
 
                      txns.forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList));

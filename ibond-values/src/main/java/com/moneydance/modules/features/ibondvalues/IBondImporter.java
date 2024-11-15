@@ -371,7 +371,7 @@ public class IBondImporter {
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public CalcTxnList getIBondInterestTxns(String tickerSymbol,
+   public CalcTxnList calcIBondInterestTxns(String tickerSymbol,
          BigDecimal month0FinalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
       CalcTxnList iBondIntTxns = new CalcTxnList();
@@ -398,12 +398,12 @@ public class IBondImporter {
       discardFutureTxns(iBondIntTxns);
 
       return iBondIntTxns;
-   } // end getIBondInterestTxns(String, BigDecimal, Function, Consumer)
+   } // end calcIBondInterestTxns(String, BigDecimal, Function, Consumer)
 
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         CalcTxnList iBondIntTxns = importer.getIBondInterestTxns("IBond202312",
+         CalcTxnList iBondIntTxns = importer.calcIBondInterestTxns("IBond202312",
             BigDecimal.valueOf(10000), month -> switch (month.toString()) {
                case "2024-07" -> BigDecimal.ZERO; // new BigDecimal("-1221.00");
                case "2024-11" -> BigDecimal.ZERO; // new BigDecimal("-250.00");
