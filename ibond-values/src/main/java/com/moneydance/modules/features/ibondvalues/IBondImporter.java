@@ -320,12 +320,10 @@ public class IBondImporter {
          BigDecimal interest = eligibleBal.multiply(monthlyRate).setScale(2, HALF_EVEN);
          String memo = "%tb %<tY interest".formatted(month);
          month = month.plusMonths(1);
-         YearMonth payMonth = month;
-
-         if (payMonth.isBefore(year5Age)) {
-            YearMonth candidate = payMonth.plusMonths(MONTHS_TO_LOSE);
-            payMonth = candidate.isBefore(year5Age) ? candidate : year5Age;
-         }
+         YearMonth candidate = month.plusMonths(MONTHS_TO_LOSE);
+         YearMonth payMonth = month.isBefore(year5Age)
+            ? candidate.isBefore(year5Age) ? candidate : year5Age
+            : month;
          iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
 
          List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
@@ -364,15 +362,15 @@ public class IBondImporter {
     * Calculate Series I savings bond interest payment transactions.
     *
     * @param tickerSymbol       Ticker symbol in the format IBondYYYYMM
-    * @param month0FinalBal     Final balance in month issued
+    * @param finalBal           Final balance in month issued
     * @param redemptionForMonth Function providing redemption total for a month
     * @param displayRates       Consumer of interest rate message producer lambdas
-    * @return Collection of interest payment transactions
+    * @return Collection of calculated interest payment transactions
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
    public CalcTxnList calcIBondInterestTxns(String tickerSymbol,
-         BigDecimal month0FinalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
+         BigDecimal finalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
       CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
@@ -380,8 +378,7 @@ public class IBondImporter {
       YearMonth month = issueMonth;
 
       YearMonth thisMonth = YearMonth.now();
-      BigDecimal fixedRate = getRateForMonth(month, tickerSymbol).fixedRate();
-      BigDecimal finalBal = month0FinalBal;
+      BigDecimal fixedRate = getRateForMonth(issueMonth, tickerSymbol).fixedRate();
 
       while (month.isBefore(thisMonth)) {
          final YearMonth curMonth = month;
@@ -393,7 +390,7 @@ public class IBondImporter {
             compositeRate, finalBal, curMonth, year5Age, iBondIntTxns, redemptionForMonth);
 
          month = curMonth.plusMonths(SEMIANNUAL_MONTHS);
-      } // end while before, or on, today
+      } // end while before, or on, this month
 
       discardFutureTxns(iBondIntTxns);
 

@@ -7,6 +7,9 @@ import java.util.TreeMap;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
+/**
+ * Collection of calculated interest payment transactions that are indexed by month.
+ */
 public class CalcTxnList {
     private final TreeMap<YearMonth, List<CalcTxn>> txnListMap = new TreeMap<>();
 

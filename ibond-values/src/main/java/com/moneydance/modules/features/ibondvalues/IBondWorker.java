@@ -77,7 +77,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end commitChanges()
 
    /**
-    * @return True when we have uncommitted changes in memory
+    * {@return True when we have uncommitted changes in memory}
     */
    public boolean isModified() {
 
@@ -94,7 +94,6 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    private void storeInterestTxnIfDiff(
          CalcTxn txn, Account investAccount, InvestTxnList investTxns) {
       Account secAccount = investTxns.account();
-
       Optional<SplitTxn> divTxn = investTxns.getMatchingDivReinvestTxn(txn);
 
       if (divTxn.isEmpty()) {
@@ -154,7 +153,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       }
 
       return redemptionTotal;
-   } // end redemptionForMonth(YearMonth, InvestTxnList)
+   } // end redemptionForMonth(YearMonth, Account, InvestTxnList)
 
    /**
     * Check if this security has a ticker symbol for Series I savings bonds and if shares
