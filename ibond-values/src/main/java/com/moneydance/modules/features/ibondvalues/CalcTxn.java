@@ -5,9 +5,9 @@ import java.time.LocalDate;
 import java.time.YearMonth;
 
 /**
- * Data record to hold interest payment transaction details.
+ * Data record to hold calculated interest payment transaction details.
  */
-public class InterestTxnRec {
+public class CalcTxn {
     private final YearMonth payMonth;
     private final LocalDate payDate;
     private final BigDecimal payAmount;
@@ -21,7 +21,7 @@ public class InterestTxnRec {
      * @param payAmount Payment amount
      * @param memo      Payment memo
      */
-    public InterestTxnRec(YearMonth payMonth, BigDecimal payAmount, String memo) {
+    public CalcTxn(YearMonth payMonth, BigDecimal payAmount, String memo) {
         this.payMonth = payMonth;
         this.payDate = payMonth.atDay(1);
         this.payAmount = payAmount;
@@ -69,4 +69,4 @@ public class InterestTxnRec {
         return "%s pay %s for %s".formatted(payDate(), payAmount(), memo());
     }
 
-} // end class InterestTxnRec
+} // end class CalcTxn

@@ -312,7 +312,7 @@ public class IBondImporter {
     */
    private static BigDecimal addNonCompoundingMonths(BigDecimal compositeRate,
          BigDecimal finalBal, YearMonth month, YearMonth year5Age,
-         TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns,
+         TreeMap<YearMonth, List<CalcTxn>> iBondIntTxns,
          Function<YearMonth, BigDecimal> redemptionForMonth) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
       BigDecimal eligibleBal = finalBal;
@@ -328,11 +328,11 @@ public class IBondImporter {
             payMonth = candidate.isBefore(year5Age) ? candidate : year5Age;
          }
          iBondIntTxns.computeIfAbsent(payMonth, k -> new ArrayList<>())
-            .add(new InterestTxnRec(payMonth, interest, memo));
+            .add(new CalcTxn(payMonth, interest, memo));
 
-         List<InterestTxnRec> curIntTxns = iBondIntTxns.get(month);
+         List<CalcTxn> curIntTxns = iBondIntTxns.get(month);
          BigDecimal startingBal = (curIntTxns == null) ? finalBal : finalBal.add(curIntTxns
-            .stream().map(InterestTxnRec::payAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+            .stream().map(CalcTxn::payAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
 
          // Get redemption total for this month (zero or negative value)
          BigDecimal redemption = redemptionForMonth.apply(month);
@@ -341,7 +341,7 @@ public class IBondImporter {
          finalBal = startingBal.add(redemption);
 
          if (curIntTxns != null) {
-            for (InterestTxnRec txn : curIntTxns) {
+            for (CalcTxn txn : curIntTxns) {
                txn.endingBal(finalBal);
             }
          }
@@ -355,7 +355,7 @@ public class IBondImporter {
     *
     * @param iBondIntTxns Collection of interest payment transactions
     */
-   private void discardFutureTxns(TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns) {
+   private void discardFutureTxns(TreeMap<YearMonth, List<CalcTxn>> iBondIntTxns) {
       YearMonth thisMonth = YearMonth.now();
 
       iBondIntTxns.forEach((month, intTxns) -> intTxns
@@ -374,10 +374,10 @@ public class IBondImporter {
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public TreeMap<YearMonth, List<InterestTxnRec>> getIBondInterestTxns(String tickerSymbol,
+   public TreeMap<YearMonth, List<CalcTxn>> getIBondInterestTxns(String tickerSymbol,
          BigDecimal month0FinalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
-      TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns = new TreeMap<>();
+      TreeMap<YearMonth, List<CalcTxn>> iBondIntTxns = new TreeMap<>();
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
       YearMonth month = issueMonth;
@@ -406,7 +406,7 @@ public class IBondImporter {
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         TreeMap<YearMonth, List<InterestTxnRec>> iBondIntTxns = importer.getIBondInterestTxns(
+         TreeMap<YearMonth, List<CalcTxn>> iBondIntTxns = importer.getIBondInterestTxns(
             "IBond202312",
             BigDecimal.valueOf(10000), month -> switch (month.toString()) {
                case "2024-07" -> BigDecimal.ZERO; // new BigDecimal("-1221.00");

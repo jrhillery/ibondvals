@@ -92,7 +92,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     * @param investTxns    List of investment transactions for this transaction's security account
     */
    private void storeInterestTxnIfDiff(
-         InterestTxnRec txn, Account investAccount, InvestTxnList investTxns) {
+         CalcTxn txn, Account investAccount, InvestTxnList investTxns) {
       Account secAccount = investTxns.account();
 
       Optional<SplitTxn> divTxn = investTxns.getMatchingDivReinvestTxn(txn);
@@ -127,7 +127,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          }
       }
 
-   } // end storeInterestTxnIfDiff(Account, InvestTxnList, InterestTxnRec)
+   } // end storeInterestTxnIfDiff(CalcTxn, Account, InvestTxnList)
 
    /**
     * Provide redemption total for a month
@@ -181,7 +181,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
                   if (balance.signum() > 0) {
                      InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
-                     TreeMap<YearMonth, List<InterestTxnRec>> txns =
+                     TreeMap<YearMonth, List<CalcTxn>> txns =
                         this.importer.getIBondInterestTxns(ticker, balance,
                         month -> redemptionForMonth(month, invAccount, txnList), MdLog::debug);
 

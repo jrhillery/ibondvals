@@ -41,7 +41,7 @@ public class InvestTxnList {
      * @param txnRec Desired interest payment transaction details
      * @return Optional first matching dividend reinvest destination side transaction
      */
-    public Optional<SplitTxn> getMatchingDivReinvestTxn(InterestTxnRec txnRec) {
+    public Optional<SplitTxn> getMatchingDivReinvestTxn(CalcTxn txnRec) {
         List<AbstractTxn> txns = this.transactions.get(txnRec.payDate());
 
         if (txns != null) {
@@ -56,7 +56,7 @@ public class InvestTxnList {
         }
 
         return Optional.empty();
-    } // end getMatchingDivReinvestTxn(InterestTxnRec)
+    } // end getMatchingDivReinvestTxn(CalcTxn)
 
     /**
      * @param month Month for the redemptions to return

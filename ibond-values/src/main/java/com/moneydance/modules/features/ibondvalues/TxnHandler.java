@@ -14,7 +14,7 @@ public class TxnHandler {
     private final AccountBook book;
     private final Account investAccount;
     private final Account securityAccount;
-    private final InterestTxnRec txnRec;
+    private final CalcTxn txnRec;
 
     /**
      * Sole constructor.
@@ -24,7 +24,8 @@ public class TxnHandler {
      * @param securityAccount Investment subaccount for security generating interest
      * @param txnRec          Interest payment transaction details
      */
-    public TxnHandler(AccountBook book, Account investAccount, Account securityAccount, InterestTxnRec txnRec) {
+    public TxnHandler(AccountBook book, Account investAccount,
+                      Account securityAccount, CalcTxn txnRec) {
         this.book = book;
         this.investAccount = investAccount;
         this.securityAccount = securityAccount;
