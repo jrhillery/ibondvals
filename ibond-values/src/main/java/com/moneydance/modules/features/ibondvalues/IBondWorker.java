@@ -181,12 +181,10 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
                   if (balance.signum() > 0) {
                      InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
-                     TreeMap<YearMonth, List<CalcTxn>> txns =
-                        this.importer.getIBondInterestTxns(ticker, balance,
+                     CalcTxnList txns = this.importer.getIBondInterestTxns(ticker, balance,
                         month -> redemptionForMonth(month, invAccount, txnList), MdLog::debug);
 
-                     txns.forEach((month, intTxns) -> intTxns
-                        .forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList)));
+                     txns.forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList));
 
                      this.haveIBondSecurities = true;
                   }

@@ -311,8 +311,7 @@ public class IBondImporter {
     * @return Final balance in ending month
     */
    private static BigDecimal addNonCompoundingMonths(BigDecimal compositeRate,
-         BigDecimal finalBal, YearMonth month, YearMonth year5Age,
-         TreeMap<YearMonth, List<CalcTxn>> iBondIntTxns,
+         BigDecimal finalBal, YearMonth month, YearMonth year5Age, CalcTxnList iBondIntTxns,
          Function<YearMonth, BigDecimal> redemptionForMonth) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
       BigDecimal eligibleBal = finalBal;
@@ -327,10 +326,9 @@ public class IBondImporter {
             YearMonth candidate = payMonth.plusMonths(MONTHS_TO_LOSE);
             payMonth = candidate.isBefore(year5Age) ? candidate : year5Age;
          }
-         iBondIntTxns.computeIfAbsent(payMonth, k -> new ArrayList<>())
-            .add(new CalcTxn(payMonth, interest, memo));
+         iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
 
-         List<CalcTxn> curIntTxns = iBondIntTxns.get(month);
+         List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
          BigDecimal startingBal = (curIntTxns == null) ? finalBal : finalBal.add(curIntTxns
             .stream().map(CalcTxn::payAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
 
@@ -348,20 +346,19 @@ public class IBondImporter {
       } // end for non-compounding months
 
       return finalBal;
-   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, YearMonth, YearMonth, TreeMap, Function)
+   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, YearMonth, YearMonth, CalcTxnList, Function)
 
    /**
     * Discard future transactions -- they would change if redemptions occur.
     *
     * @param iBondIntTxns Collection of interest payment transactions
     */
-   private void discardFutureTxns(TreeMap<YearMonth, List<CalcTxn>> iBondIntTxns) {
+   private void discardFutureTxns(CalcTxnList iBondIntTxns) {
       YearMonth thisMonth = YearMonth.now();
 
-      iBondIntTxns.forEach((month, intTxns) -> intTxns
-         .removeIf(ibIntTxn -> ibIntTxn.payMonth().isAfter(thisMonth)));
+      iBondIntTxns.removeIf(ibIntTxn -> ibIntTxn.payMonth().isAfter(thisMonth));
 
-   } // end discardFutureTxns(TreeMap)
+   } // end discardFutureTxns(CalcTxnList)
 
    /**
     * Calculate Series I savings bond interest payment transactions.
@@ -374,10 +371,10 @@ public class IBondImporter {
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   public TreeMap<YearMonth, List<CalcTxn>> getIBondInterestTxns(String tickerSymbol,
+   public CalcTxnList getIBondInterestTxns(String tickerSymbol,
          BigDecimal month0FinalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
-      TreeMap<YearMonth, List<CalcTxn>> iBondIntTxns = new TreeMap<>();
+      CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
       YearMonth month = issueMonth;
@@ -406,17 +403,15 @@ public class IBondImporter {
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
-         TreeMap<YearMonth, List<CalcTxn>> iBondIntTxns = importer.getIBondInterestTxns(
-            "IBond202312",
+         CalcTxnList iBondIntTxns = importer.getIBondInterestTxns("IBond202312",
             BigDecimal.valueOf(10000), month -> switch (month.toString()) {
                case "2024-07" -> BigDecimal.ZERO; // new BigDecimal("-1221.00");
                case "2024-11" -> BigDecimal.ZERO; // new BigDecimal("-250.00");
                default -> BigDecimal.ZERO;
             }, rates -> System.out.println(rates.get()));
 
-         iBondIntTxns.forEach((k, intTxns) -> intTxns.forEach(ibIntTxn ->
-            System.out.format("On %s pay %s for %s, balance %s%n",
-            ibIntTxn.payDate(), ibIntTxn.payAmount(), ibIntTxn.memo(), ibIntTxn.endingBal())));
+         iBondIntTxns.forEach(ibIntTxn -> System.out.format("On %s pay %s for %s, balance %s%n",
+            ibIntTxn.payDate(), ibIntTxn.payAmount(), ibIntTxn.memo(), ibIntTxn.endingBal()));
       } catch (Exception e) {
          throw new RuntimeException(e);
       }
