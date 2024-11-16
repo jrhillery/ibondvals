@@ -238,6 +238,17 @@ public class IBondImporter {
    } // end getCellOfType(int, CellType, Row)
 
    /**
+    * @param calcTxns list of calculated interest payment transactions
+    * @return Sum of the listed payments' amounts
+    */
+   private static BigDecimal addAmounts(List<CalcTxn> calcTxns) {
+      if (calcTxns == null)
+         return BigDecimal.ZERO;
+
+      return calcTxns.stream().map(CalcTxn::payAmount).reduce(BigDecimal.ZERO, BigDecimal::add);
+   } // end addAmounts(List<CalcTxn>)
+
+   /**
     * Determine I bond issue year and month by parsing the ticker symbol.
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
@@ -326,15 +337,17 @@ public class IBondImporter {
             : month;
          iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
 
+         // Start by adding calculated interest for this month
          List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
-         BigDecimal startingBal = (curIntTxns == null) ? finalBal : finalBal.add(curIntTxns
-            .stream().map(CalcTxn::payAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+         BigDecimal startingBal = finalBal.add(addAmounts(curIntTxns));
 
-         // Get redemption total for this month (zero or negative value)
+         // Add redemption total (zero or negative value) for this month
          BigDecimal redemption = redemptionForMonth.apply(month);
+         finalBal = startingBal.add(redemption);
+
+         // reduce the interest-eligible balance by the portion of the starting balance redeemed
          eligibleBal = eligibleBal.multiply(
             BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64);
-         finalBal = startingBal.add(redemption);
 
          if (curIntTxns != null) {
             for (CalcTxn txn : curIntTxns) {

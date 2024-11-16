@@ -31,7 +31,8 @@ public class CalcTxnList {
      * interest for the prior 3 months, which are no longer lost.
      *
      * @param month Month for the transactions to return
-     * @return List of calculated interest payment transaction detail records
+     * @return List of calculated interest payment transaction detail records,
+     *         or {@code null} if none are present
      */
     public List<CalcTxn> getForMonth(YearMonth month) {
 
