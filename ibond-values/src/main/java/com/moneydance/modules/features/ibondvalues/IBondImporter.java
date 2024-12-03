@@ -360,18 +360,6 @@ public class IBondImporter {
    } // end addNonCompoundingMonths(BigDecimal, BigDecimal, YearMonth, YearMonth, CalcTxnList, Function)
 
    /**
-    * Discard future transactions -- they would change if redemptions occur.
-    *
-    * @param iBondIntTxns Collection of interest payment transactions
-    */
-   private void discardFutureTxns(CalcTxnList iBondIntTxns) {
-      YearMonth thisMonth = YearMonth.now();
-
-      iBondIntTxns.removeIf(ibIntTxn -> ibIntTxn.payMonth().isAfter(thisMonth));
-
-   } // end discardFutureTxns(CalcTxnList)
-
-   /**
     * Calculate Series I savings bond interest payment transactions.
     *
     * @param tickerSymbol       Ticker symbol in the format IBondYYYYMM
@@ -404,8 +392,6 @@ public class IBondImporter {
 
          month = curMonth.plusMonths(SEMIANNUAL_MONTHS);
       } // end while before, or on, this month
-
-      discardFutureTxns(iBondIntTxns);
 
       return iBondIntTxns;
    } // end calcIBondInterestTxns(String, BigDecimal, Function, Consumer)

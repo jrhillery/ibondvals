@@ -156,6 +156,18 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end redemptionForMonth(YearMonth, Account, InvestTxnList)
 
    /**
+    * Discard future transactions -- they would change if redemptions occur.
+    *
+    * @param iBondIntTxns Collection of interest payment transactions
+    */
+   private static void discardFutureTxns(CalcTxnList iBondIntTxns) {
+      YearMonth thisMonth = YearMonth.now();
+
+      iBondIntTxns.removeIf(ibIntTxn -> ibIntTxn.payMonth().isAfter(thisMonth));
+
+   } // end discardFutureTxns(CalcTxnList)
+
+   /**
     * Check if this security has a ticker symbol for Series I savings bonds and if shares
     * exist in an investment account. If so, store any new interest payments for this security.
     *
@@ -182,6 +194,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                      InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
                      CalcTxnList txns = this.importer.calcIBondInterestTxns(ticker, balance,
                         month -> redemptionForMonth(month, invAccount, txnList), MdLog::debug);
+
+                     discardFutureTxns(txns);
 
                      txns.forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList));
 
