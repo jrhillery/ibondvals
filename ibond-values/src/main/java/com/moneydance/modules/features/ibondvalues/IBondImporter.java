@@ -60,8 +60,8 @@ public class IBondImporter {
     * Series I savings bond changes every 6 months, based on inflation.
     *
     * @param inflationRate Semiannual (1/2 year) inflation rate
-    * @param fixedRate Fixed interest rate
-    * @param startMonth Month the rates took effect
+    * @param fixedRate     Fixed interest rate
+    * @param startMonth    Month the rates took effect
     */
    public record IBondRateRec(
       BigDecimal inflationRate, BigDecimal fixedRate, YearMonth startMonth) {
@@ -325,10 +325,10 @@ public class IBondImporter {
          BigDecimal finalBal, YearMonth month, YearMonth year5Age, CalcTxnList iBondIntTxns,
          Function<YearMonth, BigDecimal> redemptionForMonth) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
-      BigDecimal eligibleBal = finalBal;
+      IBondBalanceRec cur = new IBondBalanceRec(finalBal, finalBal);
 
       for (int m = 0; m < SEMIANNUAL_MONTHS; ++m) {
-         BigDecimal interest = eligibleBal.multiply(monthlyRate).setScale(2, HALF_EVEN);
+         BigDecimal interest = cur.eligibleBal().multiply(monthlyRate).setScale(2, HALF_EVEN);
          String memo = "%tb %<tY interest".formatted(month);
          month = month.plusMonths(1);
          YearMonth candidate = month.plusMonths(MONTHS_TO_LOSE);
@@ -339,24 +339,24 @@ public class IBondImporter {
 
          // Start by adding calculated interest for this month
          List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
-         BigDecimal startingBal = finalBal.add(addAmounts(curIntTxns));
+         BigDecimal startingBal = cur.totalBal().add(addAmounts(curIntTxns));
 
          // Add redemption total (zero or negative value) for this month
          BigDecimal redemption = redemptionForMonth.apply(month);
-         finalBal = startingBal.add(redemption);
+         cur.totalBal(startingBal.add(redemption));
 
          // reduce the interest-eligible balance by the portion of the starting balance redeemed
-         eligibleBal = eligibleBal.multiply(
-            BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64);
+         cur.eligibleBal(cur.eligibleBal().multiply(
+            BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64));
 
          if (curIntTxns != null) {
             for (CalcTxn txn : curIntTxns) {
-               txn.endingBal(finalBal);
+               txn.endingBal(cur.totalBal());
             }
          }
       } // end for non-compounding months
 
-      return finalBal;
+      return cur.totalBal();
    } // end addNonCompoundingMonths(BigDecimal, BigDecimal, YearMonth, YearMonth, CalcTxnList, Function)
 
    /**
