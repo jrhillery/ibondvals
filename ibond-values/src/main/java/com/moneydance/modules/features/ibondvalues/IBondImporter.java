@@ -156,15 +156,24 @@ public class IBondImporter {
    /**
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
     *
-    * @return Mapping from months to historical I bond interest rates
     * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   private TreeMap<YearMonth, IBondRateRec> getIBondRates() throws MduException {
+   public void loadIBondRates() throws MduException {
       if (this.iBondRates == null) {
          Spliterator<Row> dataRowItr = getDataRowIterator();
          loadColumnIndexes(dataRowItr);
          this.iBondRates = getIBondRates(dataRowItr);
       }
+
+   } // end loadIBondRates()
+
+   /**
+    * {@return Mapping from months to historical I bond interest rates}
+    */
+   private TreeMap<YearMonth, IBondRateRec> getIBondRates() {
+      if (this.iBondRates == null)
+         throw new IllegalStateException("%s.loadIBondRates must be called earlier"
+            .formatted(getClass().getSimpleName()));
 
       return this.iBondRates;
    } // end getIBondRates()
@@ -272,10 +281,9 @@ public class IBondImporter {
     * @param tickerSymbol Ticker symbol
     * @return Corresponding I bond rate record
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
-    * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
    private IBondRateRec getRateForMonth(YearMonth month, String tickerSymbol)
-         throws MduExcepcionito, MduException {
+         throws MduExcepcionito {
       YearMonth rateMonth = getIBondRates().floorKey(month);
 
       if (rateMonth == null)
@@ -371,6 +379,7 @@ public class IBondImporter {
 
    /**
     * Calculate Series I savings bond interest payment transactions.
+    * Note: {@code loadIBondRates} must have been called on this instance earlier.
     *
     * @param tickerSymbol       Ticker symbol in the format IBondYYYYMM
     * @param finalBal           Final balance in month issued
@@ -378,11 +387,10 @@ public class IBondImporter {
     * @param displayRates       Consumer of interest rate message producer lambdas
     * @return Collection of calculated interest payment transactions
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
-    * @throws MduException    Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
    public CalcTxnList calcIBondInterestTxns(String tickerSymbol,
          BigDecimal finalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
-         Consumer<Supplier<String>> displayRates) throws MduExcepcionito, MduException {
+         Consumer<Supplier<String>> displayRates) throws MduExcepcionito {
       CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
@@ -410,6 +418,7 @@ public class IBondImporter {
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
+         importer.loadIBondRates();
          CalcTxnList iBondIntTxns = importer.calcIBondInterestTxns("IBond202312",
             BigDecimal.valueOf(10000), month -> switch (month.toString()) {
                case "2024-07" -> BigDecimal.ZERO; // new BigDecimal("-1221.00");

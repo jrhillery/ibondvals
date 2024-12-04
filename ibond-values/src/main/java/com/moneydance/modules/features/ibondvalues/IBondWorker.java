@@ -172,9 +172,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     * exist in an investment account. If so, store any new interest payments for this security.
     *
     * @param security Moneydance security
-    * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
-   private void storeNewIBondTxns(CurrencyType security) throws MduException {
+   private void storeNewIBondTxns(CurrencyType security) {
       String ticker = security.getTickerSymbol();
       String secName = security.getName();
 
@@ -218,11 +217,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     */
    protected Boolean doInBackground() {
       try {
-         List<CurrencyType> securityList = this.securities.getAllCurrencies();
-
-         for (CurrencyType security : securityList) {
-            storeNewIBondTxns(security);
-         } // end for each security
+         this.importer.loadIBondRates();
+         this.securities.getAllCurrencies().forEach(this::storeNewIBondTxns);
 
          if (!this.haveIBondSecurities) {
             display("Unable to locate any security with an I bond ticker symbol",
