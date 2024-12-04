@@ -1,9 +1,7 @@
 package com.moneydance.modules.features.ibondvalues;
 
 import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.TreeMap;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 
@@ -38,6 +36,18 @@ public class CalcTxnList {
 
         return this.txnListMap.get(month);
     } // end getForMonth(YearMonth)
+
+    /**
+     * Obtain our month keys that follow a given month.
+     *
+     * @param fromMonth Month after which to start
+     * @return Ordered collection of months we have that follow the given month
+     */
+    public NavigableSet<YearMonth> tailKeys(YearMonth fromMonth) {
+
+        return this.txnListMap.navigableKeySet()
+            .subSet(fromMonth, false, this.txnListMap.lastKey(), true);
+    } // end tailKeys(YearMonth)
 
     /**
      * Performs the given action for each transaction in this collection.

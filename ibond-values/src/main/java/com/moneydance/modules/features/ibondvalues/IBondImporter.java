@@ -48,6 +48,7 @@ public class IBondImporter {
    private static final int SEMIANNUAL_MONTHS = 6;
    private static final int MONTHS_TO_LOSE = 3;
    private static final int EARLY_YEARS = 5;
+   private static final int RATE_SET_INTERVAL = 6; // months
    private static final DateTimeFormatter TICKER_DATE_FORMATTER = new DateTimeFormatterBuilder()
       .parseCaseInsensitive()
       .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
@@ -390,11 +391,11 @@ public class IBondImporter {
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
       YearMonth month = issueMonth;
 
-      YearMonth thisMonth = YearMonth.now();
+      YearMonth firstUnknownMonth = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
       BigDecimal fixedRate = getRateForMonth(issueMonth, tickerSymbol).fixedRate();
       IBondBalanceRec curBals = new IBondBalanceRec(finalBal, finalBal);
 
-      while (month.isBefore(thisMonth)) {
+      while (month.isBefore(firstUnknownMonth)) {
          final YearMonth curMonth = month;
          BigDecimal inflateRate = getRateForMonth(curMonth, tickerSymbol).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
@@ -406,6 +407,9 @@ public class IBondImporter {
 
          month = curMonth.plusMonths(SEMIANNUAL_MONTHS);
       } // end while before, or on, this month
+
+      iBondIntTxns.tailKeys(month).forEach(tailingMonth ->
+         updateBalances(curBals, tailingMonth, iBondIntTxns, redemptionForMonth));
 
       return iBondIntTxns;
    } // end calcIBondInterestTxns(String, BigDecimal, Function, Consumer)
