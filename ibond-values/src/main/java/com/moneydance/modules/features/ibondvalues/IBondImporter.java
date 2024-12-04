@@ -310,6 +310,36 @@ public class IBondImporter {
    } // end combineRate(BigDecimal, BigDecimal)
 
    /**
+    * Update current balances for a specified month.
+    *
+    * @param current            Current balances to update
+    * @param month              The month to add
+    * @param iBondIntTxns       Collection of interest payment transactions
+    * @param redemptionForMonth Function providing redemption total for a month
+    */
+   private static void updateBalances(IBondBalanceRec current, YearMonth month,
+         CalcTxnList iBondIntTxns, Function<YearMonth, BigDecimal> redemptionForMonth) {
+      // Start by adding calculated interest for this month
+      List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
+      BigDecimal startingBal = current.totalBal().add(addAmounts(curIntTxns));
+
+      // Add redemption total (typically zero or negative value) for this month
+      BigDecimal redemption = redemptionForMonth.apply(month);
+      current.totalBal(startingBal.add(redemption));
+
+      // reduce the interest-eligible balance by the portion of the starting balance redeemed
+      current.eligibleBal(current.eligibleBal().multiply(
+         BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64));
+
+      if (curIntTxns != null) {
+         for (CalcTxn txn : curIntTxns) {
+            txn.endingBal(current.totalBal());
+         }
+      }
+
+   } // end updateBalances(IBondBalanceRec, YearMonth, CalcTxnList, Function)
+
+   /**
     * Add I bond interest payments for months that do not compound to a specified list.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     *
@@ -337,23 +367,7 @@ public class IBondImporter {
             : month;
          iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
 
-         // Start by adding calculated interest for this month
-         List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
-         BigDecimal startingBal = cur.totalBal().add(addAmounts(curIntTxns));
-
-         // Add redemption total (zero or negative value) for this month
-         BigDecimal redemption = redemptionForMonth.apply(month);
-         cur.totalBal(startingBal.add(redemption));
-
-         // reduce the interest-eligible balance by the portion of the starting balance redeemed
-         cur.eligibleBal(cur.eligibleBal().multiply(
-            BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64));
-
-         if (curIntTxns != null) {
-            for (CalcTxn txn : curIntTxns) {
-               txn.endingBal(cur.totalBal());
-            }
-         }
+         updateBalances(cur, month, iBondIntTxns, redemptionForMonth);
       } // end for non-compounding months
 
       return cur.totalBal();
