@@ -343,22 +343,21 @@ public class IBondImporter {
     * Add I bond interest payments for months that do not compound to a specified list.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     *
+    * @param curBals            Current balances in calculation
     * @param compositeRate      Composite interest rate to use
-    * @param finalBal           Final balance in initial month
     * @param month              Initial month
     * @param year5Age           Date I bond stops losing the last 3 months of interest
     * @param iBondIntTxns       Collection of interest payment transactions
     * @param redemptionForMonth Function providing redemption total for a month
-    * @return Final balance in ending month
     */
-   private static BigDecimal addNonCompoundingMonths(BigDecimal compositeRate,
-         BigDecimal finalBal, YearMonth month, YearMonth year5Age, CalcTxnList iBondIntTxns,
+   private static void addNonCompoundingMonths(IBondBalanceRec curBals,
+         BigDecimal compositeRate, YearMonth month, YearMonth year5Age, CalcTxnList iBondIntTxns,
          Function<YearMonth, BigDecimal> redemptionForMonth) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
-      IBondBalanceRec cur = new IBondBalanceRec(finalBal, finalBal);
 
       for (int m = 0; m < SEMIANNUAL_MONTHS; ++m) {
-         BigDecimal interest = cur.eligibleBal().multiply(monthlyRate).setScale(2, HALF_EVEN);
+         BigDecimal interest = curBals.eligibleBal().multiply(monthlyRate)
+            .setScale(2, HALF_EVEN);
          String memo = "%tb %<tY interest".formatted(month);
          month = month.plusMonths(1);
          YearMonth candidate = month.plusMonths(MONTHS_TO_LOSE);
@@ -367,11 +366,10 @@ public class IBondImporter {
             : month;
          iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
 
-         updateBalances(cur, month, iBondIntTxns, redemptionForMonth);
+         updateBalances(curBals, month, iBondIntTxns, redemptionForMonth);
       } // end for non-compounding months
 
-      return cur.totalBal();
-   } // end addNonCompoundingMonths(BigDecimal, BigDecimal, YearMonth, YearMonth, CalcTxnList, Function)
+   } // end addNonCompoundingMonths(IBondBalanceRec, BigDecimal, YearMonth, YearMonth, CalcTxnList, Function)
 
    /**
     * Calculate Series I savings bond interest payment transactions.
@@ -394,6 +392,7 @@ public class IBondImporter {
 
       YearMonth thisMonth = YearMonth.now();
       BigDecimal fixedRate = getRateForMonth(issueMonth, tickerSymbol).fixedRate();
+      IBondBalanceRec curBals = new IBondBalanceRec(finalBal, finalBal);
 
       while (month.isBefore(thisMonth)) {
          final YearMonth curMonth = month;
@@ -401,8 +400,9 @@ public class IBondImporter {
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curMonth, compositeRate.scaleByPowerOfTen(2)));
-         finalBal = addNonCompoundingMonths(
-            compositeRate, finalBal, curMonth, year5Age, iBondIntTxns, redemptionForMonth);
+         addNonCompoundingMonths(curBals, compositeRate,
+            curMonth, year5Age, iBondIntTxns, redemptionForMonth);
+         curBals.eligibleBal(curBals.totalBal());
 
          month = curMonth.plusMonths(SEMIANNUAL_MONTHS);
       } // end while before, or on, this month
