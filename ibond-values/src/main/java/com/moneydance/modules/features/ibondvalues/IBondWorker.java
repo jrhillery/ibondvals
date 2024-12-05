@@ -12,6 +12,8 @@ import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static com.infinitekind.moneydance.model.Account.AccountType.INVESTMENT;
@@ -178,6 +180,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       String secName = security.getName();
 
       if (MdUtil.isIBondTickerPrefix(ticker)) {
+         Consumer<Supplier<String>> displayRates = MdLog::debug;
          try {
             LocalDate endOfIssueMonth = IBondImporter.getDateForTicker(ticker).atEndOfMonth();
             Iterable<Account> invAccounts = MdUtil.getAccounts(this.book, INVESTMENT)::iterator;
@@ -192,8 +195,10 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                   if (balance.signum() > 0) {
                      InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
                      CalcTxnList txns = this.importer.calcIBondInterestTxns(ticker, balance,
-                        month -> redemptionForMonth(month, invAccount, txnList), MdLog::debug);
+                        month -> redemptionForMonth(month, invAccount, txnList), displayRates);
 
+                     // avoid repeat display of interest rates
+                     displayRates = msgSupplier -> {};
                      discardFutureTxns(txns);
 
                      txns.forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList));
