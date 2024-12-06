@@ -276,23 +276,16 @@ public class IBondImporter {
 
    /**
     * Find the Series I savings bond interest rate history data for a given month.
+    * Note: The caller must ensure the specified month is not earlier than
+    * the earliest historical I bond interest rate (currently Nov. 1997).
     *
-    * @param month        Month for which to return I bond rate record
-    * @param tickerSymbol Ticker symbol
+    * @param month Month for which to return I bond rate record
     * @return Corresponding I bond rate record
-    * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     */
-   private IBondRateRec getRateForMonth(YearMonth month, String tickerSymbol)
-         throws MduExcepcionito {
-      YearMonth rateMonth = getIBondRates().floorKey(month);
+   private IBondRateRec getRateForMonth(YearMonth month) {
 
-      if (rateMonth == null)
-         throw new MduExcepcionito(null,
-            "No interest rates for I bonds issued as early as %tF (%s)",
-            month, tickerSymbol);
-
-      return getIBondRates().get(rateMonth);
-   } // end getRateForMonth(YearMonth, String)
+      return getIBondRates().floorEntry(month).getValue();
+   } // end getRateForMonth(YearMonth)
 
    /**
     * Compose the interest rate that will apply for the specified fixed and semiannual
@@ -394,16 +387,21 @@ public class IBondImporter {
    public CalcTxnList calcIBondInterestTxns(String tickerSymbol,
          BigDecimal finalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito {
-      CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
+
+      if (issueMonth.isBefore(getIBondRates().firstKey()))
+         throw new MduExcepcionito(null,
+            "No interest rates for I bonds issued as early as %tY-%<tm (%s)",
+            issueMonth, tickerSymbol);
+      CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
 
       YearMonth firstUnknownMonth = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
-      BigDecimal fixedRate = getRateForMonth(issueMonth, tickerSymbol).fixedRate();
+      BigDecimal fixedRate = getRateForMonth(issueMonth).fixedRate();
       IBondBalanceRec curBals = new IBondBalanceRec(finalBal, finalBal, issueMonth);
 
       while (curBals.month().isBefore(firstUnknownMonth)) {
-         BigDecimal inflateRate = getRateForMonth(curBals.month(), tickerSymbol).inflationRate();
+         BigDecimal inflateRate = getRateForMonth(curBals.month()).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curBals.month(), compositeRate.scaleByPowerOfTen(2)));
