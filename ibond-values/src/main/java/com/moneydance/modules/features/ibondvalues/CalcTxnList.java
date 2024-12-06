@@ -44,9 +44,14 @@ public class CalcTxnList {
      * @return Ordered collection of months we have that follow the given month
      */
     public NavigableSet<YearMonth> tailKeys(YearMonth fromMonth) {
+        if (this.txnListMap.isEmpty()) {
 
-        return this.txnListMap.navigableKeySet()
-            .subSet(fromMonth, false, this.txnListMap.lastKey(), true);
+            return new TreeSet<>();
+        } else {
+
+            return this.txnListMap.navigableKeySet()
+                .subSet(fromMonth, false, this.txnListMap.lastKey(), true);
+        }
     } // end tailKeys(YearMonth)
 
     /**
