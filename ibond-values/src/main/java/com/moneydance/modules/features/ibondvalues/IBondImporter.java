@@ -366,11 +366,14 @@ public class IBondImporter {
             .setScale(2, HALF_EVEN);
          String memo = "%tb %<tY interest".formatted(curBals.month());
          curBals.month(curBals.month().plusMonths(1));
-         YearMonth candidate = curBals.month().plusMonths(MONTHS_TO_LOSE);
-         YearMonth payMonth = curBals.month().isBefore(year5Age)
-            ? candidate.isBefore(year5Age) ? candidate : year5Age
-            : curBals.month();
-         iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
+
+         if (interest.signum() > 0) {
+            YearMonth candidate = curBals.month().plusMonths(MONTHS_TO_LOSE);
+            YearMonth payMonth = curBals.month().isBefore(year5Age)
+               ? candidate.isBefore(year5Age) ? candidate : year5Age
+               : curBals.month();
+            iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
+         }
 
          updateBalances(curBals, curBals.month(), iBondIntTxns, redemptionForMonth);
       } // end for non-compounding months
