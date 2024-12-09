@@ -314,24 +314,24 @@ public class IBondImporter {
    /**
     * Update current balances for a specified month.
     *
-    * @param current            Current balances to update
-    * @param month              The month to add
-    * @param iBondIntTxns       Collection of interest payment transactions
-    * @param redemptionForMonth Function providing redemption total for a month
+    * @param current        Current balances to update
+    * @param month          The month to add
+    * @param iBondIntTxns   Collection of interest payment transactions
+    * @param changeForMonth Function providing total net deposits and redemptions for a month
     */
    private static void updateBalances(IBondBalanceRec current, YearMonth month,
-         CalcTxnList iBondIntTxns, Function<YearMonth, BigDecimal> redemptionForMonth) {
+         CalcTxnList iBondIntTxns, Function<YearMonth, BigDecimal> changeForMonth) {
       // Start by adding calculated interest for this month
       List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
       BigDecimal startingBal = current.totalBal().add(addAmounts(curIntTxns));
 
       // Add redemption total (typically zero or negative value) for this month
-      BigDecimal redemption = redemptionForMonth.apply(month);
-      current.totalBal(startingBal.add(redemption));
+      BigDecimal change = changeForMonth.apply(month);
+      current.totalBal(startingBal.add(change));
 
       // reduce the interest-eligible balance by the portion of the starting balance redeemed
       current.eligibleBal(current.eligibleBal().multiply(
-         BigDecimal.ONE.add(redemption.divide(startingBal, DECIMAL64)), DECIMAL64));
+         BigDecimal.ONE.add(change.divide(startingBal, DECIMAL64)), DECIMAL64));
 
       if (curIntTxns != null) {
          curIntTxns.forEach(txn -> txn.endingBal(current.totalBal()));
@@ -343,15 +343,15 @@ public class IBondImporter {
     * Add I bond interest payments for months that do not compound to a specified list.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     *
-    * @param curBals            Current balances in calculation
-    * @param compositeRate      Composite interest rate to use
-    * @param year5Age           Date I bond stops losing the last 3 months of interest
-    * @param iBondIntTxns       Collection of interest payment transactions
-    * @param redemptionForMonth Function providing redemption total for a month
+    * @param curBals        Current balances in calculation
+    * @param compositeRate  Composite interest rate to use
+    * @param year5Age       Date I bond stops losing the last 3 months of interest
+    * @param iBondIntTxns   Collection of interest payment transactions
+    * @param changeForMonth Function providing total net deposits and redemptions for a month
     */
    private static void addNonCompoundingMonths(IBondBalanceRec curBals,
          BigDecimal compositeRate, YearMonth year5Age, CalcTxnList iBondIntTxns,
-         Function<YearMonth, BigDecimal> redemptionForMonth) {
+         Function<YearMonth, BigDecimal> changeForMonth) {
       BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
 
       for (int m = 0; m < SEMIANNUAL_MONTHS; ++m) {
@@ -368,7 +368,7 @@ public class IBondImporter {
             iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
          }
 
-         updateBalances(curBals, curBals.month(), iBondIntTxns, redemptionForMonth);
+         updateBalances(curBals, curBals.month(), iBondIntTxns, changeForMonth);
       } // end for non-compounding months
 
    } // end addNonCompoundingMonths(IBondBalanceRec, BigDecimal, YearMonth, CalcTxnList, Function)
@@ -377,15 +377,14 @@ public class IBondImporter {
     * Calculate Series I savings bond interest payment transactions.
     * Note: {@code loadIBondRates} must have been called on this instance earlier.
     *
-    * @param tickerSymbol       Ticker symbol in the format IBondYYYYMM
-    * @param finalBal           Final balance in month issued
-    * @param redemptionForMonth Function providing redemption total for a month
-    * @param displayRates       Consumer of interest rate message producer lambdas
+    * @param tickerSymbol   Ticker symbol in the format IBondYYYYMM
+    * @param changeForMonth Function providing total net deposits and redemptions for a month
+    * @param displayRates   Consumer of interest rate message producer lambdas
     * @return Collection of calculated interest payment transactions
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     */
    public CalcTxnList calcIBondInterestTxns(String tickerSymbol,
-         BigDecimal finalBal, Function<YearMonth, BigDecimal> redemptionForMonth,
+         Function<YearMonth, BigDecimal> changeForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito {
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
 
@@ -398,6 +397,7 @@ public class IBondImporter {
 
       YearMonth firstUnknownMonth = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
       BigDecimal fixedRate = getRateForMonth(issueMonth).fixedRate();
+      BigDecimal finalBal = changeForMonth.apply(issueMonth);
       IBondBalanceRec curBals = new IBondBalanceRec(finalBal, finalBal, issueMonth);
 
       while (curBals.month().isBefore(firstUnknownMonth)) {
@@ -405,23 +405,23 @@ public class IBondImporter {
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curBals.month(), compositeRate.scaleByPowerOfTen(2)));
-         addNonCompoundingMonths(curBals, compositeRate,
-            year5Age, iBondIntTxns, redemptionForMonth);
+         addNonCompoundingMonths(curBals, compositeRate, year5Age, iBondIntTxns, changeForMonth);
          curBals.eligibleBal(curBals.totalBal());
       } // end while before first unknown month
 
       iBondIntTxns.tailKeys(curBals.month()).forEach(tailingMonth ->
-         updateBalances(curBals, tailingMonth, iBondIntTxns, redemptionForMonth));
+         updateBalances(curBals, tailingMonth, iBondIntTxns, changeForMonth));
 
       return iBondIntTxns;
-   } // end calcIBondInterestTxns(String, BigDecimal, Function, Consumer)
+   } // end calcIBondInterestTxns(String, Function, Consumer)
 
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
          importer.loadIBondRates();
          CalcTxnList iBondIntTxns = importer.calcIBondInterestTxns("IBond202312",
-            BigDecimal.valueOf(10000), month -> switch (month.toString()) {
+            month -> switch (month.toString()) {
+               case "2023-12" -> BigDecimal.valueOf(10000);
                case "2024-07" -> BigDecimal.ZERO; // new BigDecimal("-1221.00");
                case "2024-11" -> BigDecimal.ZERO; // new BigDecimal("-250.00");
                default -> BigDecimal.ZERO;

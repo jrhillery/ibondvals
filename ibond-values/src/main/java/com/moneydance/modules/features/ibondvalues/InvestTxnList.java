@@ -59,10 +59,10 @@ public class InvestTxnList {
     } // end getMatchingDivReinvestTxn(CalcTxn)
 
     /**
-     * @param month Month for the redemptions to return
-     * @return List of redemption transactions for the specified month
+     * @param month Month for the transactions to return
+     * @return List of deposits and redemptions for the specified month
      */
-    public List<SplitTxn> getRedemptionsForMonth(YearMonth month) {
+    public List<SplitTxn> getChangesForMonth(YearMonth month) {
         List<SplitTxn> txns = new ArrayList<>();
 
         this.transactions.subMap(month.atDay(1), true, month.atEndOfMonth(), true)
@@ -75,7 +75,7 @@ public class InvestTxnList {
         }));
 
         return txns;
-    } // end getRedemptionsForMonth(YearMonth)
+    } // end getChangesForMonth(YearMonth)
 
     /**
      * @return Moneydance security account for this transaction

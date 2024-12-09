@@ -131,31 +131,31 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end storeInterestTxnIfDiff(CalcTxn, Account, InvestTxnList)
 
    /**
-    * Provide redemption total for a month
+    * Provide total net deposits and redemptions for a month.
     *
     * @param month         Month to total
     * @param investAccount Investment account
     * @param txnList       List of investment transactions for a securities account
-    * @return Sum of redemptions in the given month
+    * @return Sum of deposits and redemptions in the given month
     */
-   private BigDecimal redemptionForMonth(
+   private BigDecimal changeForMonth(
          YearMonth month, Account investAccount, InvestTxnList txnList) {
-      List<SplitTxn> redemptions = txnList.getRedemptionsForMonth(month);
+      List<SplitTxn> changes = txnList.getChangesForMonth(month);
 
-      long amountTotal = redemptions.stream().mapToLong(SplitTxn::getAmount).sum();
+      long amountTotal = changes.stream().mapToLong(SplitTxn::getAmount).sum();
       int decimalPlaces = investAccount.getCurrencyType().getDecimalPlaces();
-      BigDecimal redemptionTotal = BigDecimal.valueOf(amountTotal).movePointLeft(decimalPlaces);
+      BigDecimal changeTotal = BigDecimal.valueOf(amountTotal).movePointLeft(decimalPlaces);
 
-      if (!redemptions.isEmpty()) {
-         MdLog.debug(() -> redemptions.stream().map(txn -> "%s on %s"
+      if (!changes.isEmpty()) {
+         MdLog.debug(() -> changes.stream().map(txn -> "%s on %s"
             .formatted(MdUtil.getTxnAmount(txn), MdUtil.convDateIntToLocal(txn.getDateInt())))
-            .collect(Collectors.joining("; ", "From %s:%s redeem "
+            .collect(Collectors.joining("; ", "From %s:%s add "
                .formatted(investAccount.getAccountName(), txnList.account().getAccountName()),
-               " => %s for the month".formatted(redemptionTotal))));
+               " => %s for the month".formatted(changeTotal))));
       }
 
-      return redemptionTotal;
-   } // end redemptionForMonth(YearMonth, Account, InvestTxnList)
+      return changeTotal;
+   } // end changeForMonth(YearMonth, Account, InvestTxnList)
 
    /**
     * Discard future transactions -- they would change if redemptions occur.
@@ -194,8 +194,8 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
                   if (balance.signum() > 0) {
                      InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
-                     CalcTxnList txns = this.importer.calcIBondInterestTxns(ticker, balance,
-                        month -> redemptionForMonth(month, invAccount, txnList), displayRates);
+                     CalcTxnList txns = this.importer.calcIBondInterestTxns(ticker,
+                        month -> changeForMonth(month, invAccount, txnList), displayRates);
 
                      // avoid repeat display of interest rates
                      displayRates = msgSupplier -> {};
