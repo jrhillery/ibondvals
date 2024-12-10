@@ -28,6 +28,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    private final TransactionSet txnSet;
    private boolean haveIBondSecurities = false;
    private final CountDownLatch finishedLatch = new CountDownLatch(1);
+   private final YearMonth thisMonth = YearMonth.now();
 
    private final List<TxnHandler> interestTransactions = new ArrayList<>();
 
@@ -157,18 +158,6 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end changeForMonth(YearMonth, Account, InvestTxnList)
 
    /**
-    * Discard future transactions -- they would change if redemptions occur.
-    *
-    * @param iBondIntTxns Collection of interest payment transactions
-    */
-   private static void discardFutureTxns(CalcTxnList iBondIntTxns) {
-      YearMonth thisMonth = YearMonth.now();
-
-      iBondIntTxns.removeIf(ibIntTxn -> ibIntTxn.payMonth().isAfter(thisMonth));
-
-   } // end discardFutureTxns(CalcTxnList)
-
-   /**
     * Store any new interest payments for this security.
     *
     * @param securityAccount Moneydance security account to use
@@ -189,7 +178,9 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
          // avoid repeat display of interest rates
          newSecurity = false;
-         discardFutureTxns(txns);
+
+         // discard future transactions -- they would change if redemptions occur
+         txns.removeIf(ibIntTxn -> ibIntTxn.payMonth().isAfter(this.thisMonth));
 
          txns.forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList));
 
