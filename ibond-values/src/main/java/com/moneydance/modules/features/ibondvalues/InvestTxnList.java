@@ -38,6 +38,14 @@ public class InvestTxnList {
     } // end constructor
 
     /**
+     * {@return true if this map contains no transactions}
+     */
+    public boolean isEmpty() {
+
+        return this.transactions.isEmpty();
+    } // end isEmpty()
+
+    /**
      * @param txnRec Desired interest payment transaction details
      * @return Optional first matching dividend reinvest destination side transaction
      */
