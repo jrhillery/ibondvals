@@ -73,6 +73,7 @@ public class CalcTxnList {
     public void removeIf(Predicate<CalcTxn> filter) {
 
         this.txnListMap.forEach(((month, calcTxns) -> calcTxns.removeIf(filter)));
+        this.txnListMap.values().removeIf(List::isEmpty);
 
     } // end removeIf(Predicate<CalcTxn>)
 
