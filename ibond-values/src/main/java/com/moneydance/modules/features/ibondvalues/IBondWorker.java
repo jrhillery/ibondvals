@@ -6,14 +6,13 @@ import com.moneydance.apps.md.controller.FeatureModuleContext;
 
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.YearMonth;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
-import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static com.infinitekind.moneydance.model.Account.AccountType.INVESTMENT;
@@ -170,41 +169,57 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    } // end discardFutureTxns(CalcTxnList)
 
    /**
+    * Store any new interest payments for this security.
+    *
+    * @param securityAccount Moneydance security account to use
+    * @param ticker          Ticker symbol in the format IBondYYYYMM
+    * @param invAccount      Corresponding investment account
+    * @param newSecurity     true when called for a new security
+    * @return false when transactions for this security have been found
+    * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
+    */
+   private boolean storeNewIBondTxns(Account securityAccount, String ticker,
+         Account invAccount, boolean newSecurity) throws MduExcepcionito {
+      InvestTxnList txnList = new InvestTxnList(this.txnSet, securityAccount);
+
+      if (!txnList.isEmpty()) {
+         CalcTxnList txns = this.importer.calcIBondInterestTxns(ticker,
+            month -> changeForMonth(month, invAccount, txnList),
+            newSecurity ? MdLog::debug : msgSupplier -> {});
+
+         // avoid repeat display of interest rates
+         newSecurity = false;
+         discardFutureTxns(txns);
+
+         txns.forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList));
+
+         this.haveIBondSecurities = true;
+      }
+
+      return newSecurity;
+   } // end storeNewIBondTxns(Account, String, Account, Consumer)
+
+   /**
     * Check if this security has a ticker symbol for Series I savings bonds and if shares
     * exist in an investment account. If so, store any new interest payments for this security.
     *
     * @param security Moneydance security
     */
-   private void storeNewIBondTxns(CurrencyType security) {
+   private void processIBondHoldings(CurrencyType security) {
+      boolean newSecurity = true;
       String ticker = security.getTickerSymbol();
       String secName = security.getName();
 
       if (MdUtil.isIBondTickerPrefix(ticker)) {
-         Consumer<Supplier<String>> displayRates = MdLog::debug;
          try {
-            LocalDate endOfIssueMonth = IBondImporter.getDateForTicker(ticker).atEndOfMonth();
             Iterable<Account> invAccounts = MdUtil.getAccounts(this.book, INVESTMENT)::iterator;
 
             for (Account invAccount : invAccounts) {
                Optional<Account> secAccount = MdUtil.getSubAccountByName(invAccount, secName);
 
                if (secAccount.isPresent()) {
-                  BigDecimal balance =
-                     MdUtil.getBalanceAsOf(this.book, secAccount.get(), endOfIssueMonth);
-
-                  if (balance.signum() > 0) {
-                     InvestTxnList txnList = new InvestTxnList(this.txnSet, secAccount.get());
-                     CalcTxnList txns = this.importer.calcIBondInterestTxns(ticker,
-                        month -> changeForMonth(month, invAccount, txnList), displayRates);
-
-                     // avoid repeat display of interest rates
-                     displayRates = msgSupplier -> {};
-                     discardFutureTxns(txns);
-
-                     txns.forEach(txn -> storeInterestTxnIfDiff(txn, invAccount, txnList));
-
-                     this.haveIBondSecurities = true;
-                  }
+                  newSecurity = storeNewIBondTxns(
+                     secAccount.get(), ticker, invAccount, newSecurity);
                }
             } // for investment accounts
          } catch (MduExcepcionito e) {
@@ -212,7 +227,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
          }
       }
 
-   } // end storeNewIBondTxns(CurrencyType)
+   } // end processIBondHoldings(CurrencyType)
 
    /**
     * Long-running routine to pull I bond interest rates from a remote site and
@@ -223,7 +238,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    protected Boolean doInBackground() {
       try {
          this.importer.loadIBondRates();
-         this.securities.getAllCurrencies().forEach(this::storeNewIBondTxns);
+         this.securities.getAllCurrencies().forEach(this::processIBondHoldings);
 
          if (!this.haveIBondSecurities) {
             display("Unable to locate any security with an I bond ticker symbol",
