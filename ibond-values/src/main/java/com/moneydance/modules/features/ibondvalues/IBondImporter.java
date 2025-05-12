@@ -186,7 +186,7 @@ public class IBondImporter {
     * @throws MduException Problem finding all interesting column headers
     */
    private void loadColumnIndexes(Spliterator<Row> dataRowItr) throws MduException {
-      dataRowItr.tryAdvance(row -> {
+      while (dataRowItr.tryAdvance(row -> {
          for (Cell cell : row) {
             if (cell.getType() == STRING) {
                switch (IBondHistColHdr.getEnum(cell.asString())) {
@@ -196,11 +196,13 @@ public class IBondImporter {
                }
             }
          } // end for each cell in the next row
-      });
+      })) {
+         if (this.iRateCol >= 0 && this.fRateCol >= 0 && this.sDateCol >= 0)
+            return;
+      }
 
-      if (this.iRateCol < 0 || this.fRateCol < 0 || this.sDateCol < 0)
-         throw new MduException(null, "Unable to locate column headers %s in %s",
-            IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
+      throw new MduException(null, "Unable to locate column headers %s in %s",
+         IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
 
    } // end loadColumnIndexes(Spliterator<Row>)
 
