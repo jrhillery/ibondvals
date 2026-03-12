@@ -432,15 +432,17 @@ public class IBondImporter {
       return iBondIntTxns;
    } // end calcIBondInterestTxns(String, Function, Consumer)
 
+   @SuppressWarnings("ConstantValue")
    public static void main(String[] args) {
       try {
          IBondImporter importer = new IBondImporter();
          importer.loadIBondRates();
+         boolean withdraw = true;
          CalcTxnList iBondIntTxns = importer.calcIBondInterestTxns("IBond202312",
             month -> switch (month.toString()) {
                case "2023-12" -> BigDecimal.valueOf(10000);
-               case "2024-07" -> BigDecimal.ZERO; // new BigDecimal("-1221.00");
-               case "2024-11" -> BigDecimal.ZERO; // new BigDecimal("-250.00");
+               case "2024-07" -> withdraw ? BigDecimal.valueOf(-1221.00) : BigDecimal.ZERO;
+               case "2024-11" -> withdraw ? BigDecimal.valueOf(-250.00) : BigDecimal.ZERO;
                default -> BigDecimal.ZERO;
             }, rates -> System.out.println(rates.get()));
 
