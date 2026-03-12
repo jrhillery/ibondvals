@@ -9,6 +9,7 @@ import java.time.YearMonth;
 class IBondBalanceRec {
     private BigDecimal totalBal;
     private BigDecimal eligibleBal;
+    private BigDecimal unitVal;
     private YearMonth month;
 
     /**
@@ -16,11 +17,14 @@ class IBondBalanceRec {
      *
      * @param totalBal    Total balance
      * @param eligibleBal Balance eligible to earn interest
+     * @param unitVal     Unit value for interest calculations
      * @param month       Corresponding month
      */
-    public IBondBalanceRec(BigDecimal totalBal, BigDecimal eligibleBal, YearMonth month) {
+    public IBondBalanceRec(BigDecimal totalBal, BigDecimal eligibleBal,
+                           BigDecimal unitVal, YearMonth month) {
         this.totalBal = totalBal;
         this.eligibleBal = eligibleBal;
+        this.unitVal = unitVal;
         this.month = month;
 
     } // end constructor
@@ -48,6 +52,18 @@ class IBondBalanceRec {
      * @param eligibleBal Balance eligible to earn interest to store
      */
     public void eligibleBal(BigDecimal eligibleBal) { this.eligibleBal = eligibleBal; }
+
+    /**
+     * {@return Unit value for interest calculations}
+     */
+    public BigDecimal unitVal() { return this.unitVal; }
+
+    /**
+     * Set the unit value for interest calculations.
+     *
+     * @param unitVal Unit value for interest calculations to store
+     */
+    public void unitVal(BigDecimal unitVal) { this.unitVal = unitVal; }
 
     /**
      * {@return Corresponding month}

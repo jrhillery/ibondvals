@@ -22,7 +22,7 @@ import java.util.function.Function;
 import java.util.function.Supplier;
 
 import static java.math.MathContext.DECIMAL64;
-import static java.math.RoundingMode.HALF_EVEN;
+import static java.math.RoundingMode.HALF_UP;
 import static java.time.temporal.ChronoField.MONTH_OF_YEAR;
 import static java.time.temporal.ChronoField.YEAR;
 import static org.dhatim.fastexcel.reader.CellType.FORMULA;
@@ -44,11 +44,11 @@ public class IBondImporter {
    private static final String propertiesFileName = "ibond-values.properties";
 
    private static final int INTEREST_RATE_DIGITS = 4;
-   private static final BigDecimal MONTHS_PER_YEAR = BigDecimal.valueOf(12);
    private static final int SEMIANNUAL_MONTHS = 6;
    private static final int MONTHS_TO_LOSE = 3;
    private static final int EARLY_YEARS = 5;
    private static final int RATE_SET_INTERVAL = 6; // months
+   private static final BigDecimal INITIAL_UNIT_VALUE = BigDecimal.valueOf(25);
    private static final DateTimeFormatter TICKER_DATE_FORMATTER = new DateTimeFormatterBuilder()
       .parseCaseInsensitive()
       .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
@@ -138,7 +138,7 @@ public class IBondImporter {
    private static BigDecimal getInterestRateClean(Cell cell) {
       BigDecimal bd = cell.asNumber();
 
-      return bd.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
+      return bd.setScale(INTEREST_RATE_DIGITS, HALF_UP);
    } // end getInterestRateClean(Cell)
 
    /**
@@ -308,7 +308,7 @@ public class IBondImporter {
       }
 
       // Round composite rate to the fourth place past the decimal point
-      compositeRate = compositeRate.setScale(INTEREST_RATE_DIGITS, HALF_EVEN);
+      compositeRate = compositeRate.setScale(INTEREST_RATE_DIGITS, HALF_UP);
 
       return compositeRate;
    } // end combineRate(BigDecimal, BigDecimal)
@@ -333,7 +333,8 @@ public class IBondImporter {
 
       // reduce the interest-eligible balance by the portion of the starting balance redeemed
       current.eligibleBal(current.eligibleBal().multiply(
-         BigDecimal.ONE.add(change.divide(startingBal, DECIMAL64)), DECIMAL64));
+         BigDecimal.ONE.add(change.divide(startingBal, DECIMAL64)), DECIMAL64)
+         .setScale(2, HALF_UP));
 
       if (curIntTxns != null) {
          curIntTxns.forEach(txn -> txn.endingBal(current.totalBal()));
@@ -344,6 +345,9 @@ public class IBondImporter {
    /**
     * Add I bond interest payments for months that do not compound to a specified list.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
+    * Details of interest rate calculations are in the US Code of Federal Regulations
+    * <a href="https://www.ecfr.gov/current/title-31/subtitle-B/chapter-II/subchapter-A/part-359">
+    *     Title 31 Subtitle B Chapter II Subchapter A Part 359</a>.
     *
     * @param curBals        Current balances in calculation
     * @param compositeRate  Composite interest rate to use
@@ -354,11 +358,16 @@ public class IBondImporter {
    private static void addNonCompoundingMonths(IBondBalanceRec curBals,
          BigDecimal compositeRate, YearMonth year5Age, CalcTxnList iBondIntTxns,
          Function<YearMonth, BigDecimal> changeForMonth) {
-      BigDecimal monthlyRate = compositeRate.divide(MONTHS_PER_YEAR, DECIMAL64);
+      BigDecimal unitVal = curBals.unitVal(), priorUnitVal = unitVal;
+      BigDecimal monthlyMultiplier = BigDecimal.valueOf(
+         Math.pow(1.0 + compositeRate.doubleValue() / 2.0, 1.0 / SEMIANNUAL_MONTHS));
 
       for (int m = 0; m < SEMIANNUAL_MONTHS; ++m) {
-         BigDecimal interest = curBals.eligibleBal().multiply(monthlyRate)
-            .setScale(2, HALF_EVEN);
+         unitVal = unitVal.multiply(monthlyMultiplier, DECIMAL64);
+         BigDecimal roundedUnitVal = unitVal.setScale(2, HALF_UP);
+         BigDecimal eligibleUnits = curBals.eligibleBal().divide(curBals.unitVal(), DECIMAL64);
+         BigDecimal interest = roundedUnitVal.subtract(priorUnitVal).multiply(eligibleUnits)
+            .setScale(2, HALF_UP);
          String memo = "%tb %<tY interest".formatted(curBals.month());
          curBals.month(curBals.month().plusMonths(1));
 
@@ -371,7 +380,9 @@ public class IBondImporter {
          }
 
          updateBalances(curBals, curBals.month(), iBondIntTxns, changeForMonth);
+         priorUnitVal = roundedUnitVal;
       } // end for non-compounding months
+      curBals.unitVal(priorUnitVal);
 
    } // end addNonCompoundingMonths(IBondBalanceRec, BigDecimal, YearMonth, CalcTxnList, Function)
 
@@ -400,7 +411,8 @@ public class IBondImporter {
       YearMonth firstUnknownMonth = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
       BigDecimal fixedRate = getRateForMonth(issueMonth).fixedRate();
       BigDecimal finalBal = changeForMonth.apply(issueMonth);
-      IBondBalanceRec curBals = new IBondBalanceRec(finalBal, finalBal, issueMonth);
+      IBondBalanceRec curBals =
+         new IBondBalanceRec(finalBal, finalBal, INITIAL_UNIT_VALUE, issueMonth);
 
       while (curBals.month().isBefore(firstUnknownMonth)) {
          BigDecimal inflateRate = getRateForMonth(curBals.month()).inflationRate();
@@ -408,7 +420,10 @@ public class IBondImporter {
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curBals.month(), compositeRate.scaleByPowerOfTen(2)));
          addNonCompoundingMonths(curBals, compositeRate, year5Age, iBondIntTxns, changeForMonth);
-         curBals.eligibleBal(curBals.totalBal());
+         curBals.eligibleBal(curBals.totalBal()
+            .add(iBondIntTxns.tailKeys(curBals.month()).stream()
+               .map(tMonth -> addAmounts(iBondIntTxns.getForMonth(tMonth)))
+               .reduce(BigDecimal.ZERO, BigDecimal::add)));
       } // end while before first unknown month
 
       iBondIntTxns.tailKeys(curBals.month()).forEach(tailingMonth ->
