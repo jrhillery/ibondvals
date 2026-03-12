@@ -7,9 +7,7 @@ import com.moneydance.apps.md.controller.FeatureModuleContext;
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
 import java.time.YearMonth;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
@@ -30,6 +28,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
    private final CountDownLatch finishedLatch = new CountDownLatch(1);
    private final YearMonth thisMonth = YearMonth.now();
 
+   private final Set<Account> informedAccounts = new HashSet<>();
    private final List<TxnHandler> interestTransactions = new ArrayList<>();
 
    /**
@@ -72,6 +71,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       int numInterestTxns = this.interestTransactions.size();
 
       this.interestTransactions.forEach(TxnHandler::applyUpdate);
+      this.informedAccounts.clear();
       this.interestTransactions.clear();
 
       return Optional.of("Recorded %d interest payment transaction%s"
@@ -99,10 +99,11 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       Optional<SplitTxn> divTxn = investTxns.getMatchingDivReinvestTxn(txn);
 
       if (divTxn.isEmpty()) {
-         if (!this.isModified()) {
+         if (!this.informedAccounts.contains(investAccount)) {
             Account category = AccountUtil.getDefaultCategoryForAcct(investAccount);
             display("Will use category %s (the default) for new interest payments in %s"
                .formatted(category.getAccountName(), investAccount.getAccountName()));
+            this.informedAccounts.add(investAccount);
          }
          // store a new transaction
          display("On %tF %s:%s pay %s for %s, bal %.2f".formatted(txn.payDate(),
