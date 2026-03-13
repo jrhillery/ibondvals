@@ -48,7 +48,6 @@ public class IBondImporter {
    private static final int MONTHS_TO_LOSE = 3;
    private static final int EARLY_YEARS = 5;
    private static final int MATURITY_YEARS = 30;
-   private static final int RATE_SET_INTERVAL = 6; // months
    private static final BigDecimal INITIAL_UNIT_VALUE = BigDecimal.valueOf(25);
    private static final DateTimeFormatter TICKER_DATE_FORMATTER = new DateTimeFormatterBuilder()
       .parseCaseInsensitive()
@@ -345,11 +344,11 @@ public class IBondImporter {
          CalcTxnList iBondIntTxns, Function<YearMonth, BigDecimal> changeForMonth) {
       // Start by adding calculated interest for this month
       List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
-      BigDecimal startingBal = current.totalBal().add(addAmounts(curIntTxns));
+      BigDecimal startingBal = current.redemptionVal().add(addAmounts(curIntTxns));
 
       // Add redemption total (typically zero or negative value) for this month
       BigDecimal change = changeForMonth.apply(month);
-      current.totalBal(startingBal.add(change));
+      current.redemptionVal(startingBal.add(change));
 
       // reduce the interest-eligible balance by the portion of the starting balance redeemed
       current.eligibleBal(current.eligibleBal().multiply(
@@ -357,7 +356,7 @@ public class IBondImporter {
          .setScale(2, HALF_UP));
 
       if (curIntTxns != null) {
-         curIntTxns.forEach(txn -> txn.endingBal(current.totalBal()));
+         curIntTxns.forEach(txn -> txn.endingBal(current.redemptionVal()));
       }
 
    } // end updateBalances(IBondBalanceRec, YearMonth, CalcTxnList, Function)
@@ -393,10 +392,10 @@ public class IBondImporter {
 
          if (interest.signum() > 0) {
             YearMonth candidate = curBals.month().plusMonths(MONTHS_TO_LOSE);
-            YearMonth payMonth = curBals.month().isBefore(year5Age)
+            YearMonth accrualMonth = curBals.month().isBefore(year5Age)
                ? candidate.isBefore(year5Age) ? candidate : year5Age
                : curBals.month();
-            iBondIntTxns.add(new CalcTxn(payMonth, interest, memo));
+            iBondIntTxns.add(new CalcTxn(accrualMonth, interest, memo));
          }
 
          updateBalances(curBals, curBals.month(), iBondIntTxns, changeForMonth);
@@ -423,7 +422,7 @@ public class IBondImporter {
       CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
       YearMonth endMonth = min(issueMonth.plusYears(MATURITY_YEARS),
-         getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL));
+         getIBondRates().lastKey().plusMonths(SEMIANNUAL_MONTHS));
       BigDecimal fixedRate = getRateForMonth(issueMonth).fixedRate();
       BigDecimal finalBal = changeForMonth.apply(issueMonth);
       IBondBalanceRec curBals =
@@ -435,7 +434,7 @@ public class IBondImporter {
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curBals.month(), compositeRate.scaleByPowerOfTen(2)));
          addNonCompoundingMonths(curBals, compositeRate, year5Age, iBondIntTxns, changeForMonth);
-         curBals.eligibleBal(curBals.totalBal()
+         curBals.eligibleBal(curBals.redemptionVal()
             .add(iBondIntTxns.tailKeys(curBals.month()).stream()
                .map(tMonth -> addAmounts(iBondIntTxns.getForMonth(tMonth)))
                .reduce(BigDecimal.ZERO, BigDecimal::add)));
@@ -452,7 +451,7 @@ public class IBondImporter {
       try {
          IBondImporter importer = new IBondImporter();
          importer.loadIBondRates();
-         boolean withdraw = true;
+         boolean withdraw = false;
          CalcTxnList iBondIntTxns = importer.calcIBondInterestTxns("IBond202312",
             month -> switch (month.toString()) {
                case "2023-12" -> BigDecimal.valueOf(10000);

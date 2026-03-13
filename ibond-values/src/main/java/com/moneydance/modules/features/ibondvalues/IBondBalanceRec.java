@@ -7,7 +7,7 @@ import java.time.YearMonth;
  * Data record to hold intermediate balance data while calculating interest transactions.
  */
 class IBondBalanceRec {
-    private BigDecimal totalBal;
+    private BigDecimal redemptionVal;
     private BigDecimal eligibleBal;
     private BigDecimal unitVal;
     private YearMonth month;
@@ -15,14 +15,14 @@ class IBondBalanceRec {
     /**
      * Sole constructor.
      *
-     * @param totalBal    Total balance
-     * @param eligibleBal Balance eligible to earn interest
-     * @param unitVal     Unit value for interest calculations
-     * @param month       Corresponding month
+     * @param redemptionVal Redemption value
+     * @param eligibleBal   Balance eligible to earn interest
+     * @param unitVal       Unit value for interest calculations
+     * @param month         Corresponding month
      */
-    public IBondBalanceRec(BigDecimal totalBal, BigDecimal eligibleBal,
+    public IBondBalanceRec(BigDecimal redemptionVal, BigDecimal eligibleBal,
                            BigDecimal unitVal, YearMonth month) {
-        this.totalBal = totalBal;
+        this.redemptionVal = redemptionVal;
         this.eligibleBal = eligibleBal;
         this.unitVal = unitVal;
         this.month = month;
@@ -30,16 +30,16 @@ class IBondBalanceRec {
     } // end constructor
 
     /**
-     * {@return Total balance}
+     * {@return Redemption value}
      */
-    public BigDecimal totalBal() { return this.totalBal; }
+    public BigDecimal redemptionVal() { return this.redemptionVal; }
 
     /**
-     * Set the total balance.
+     * Set the redemption value.
      *
-     * @param totalBal Total balance to store
+     * @param redemptionVal Redemption value to store
      */
-    public void totalBal(BigDecimal totalBal) { this.totalBal = totalBal; }
+    public void redemptionVal(BigDecimal redemptionVal) { this.redemptionVal = redemptionVal; }
 
     /**
      * {@return Balance eligible to earn interest}
