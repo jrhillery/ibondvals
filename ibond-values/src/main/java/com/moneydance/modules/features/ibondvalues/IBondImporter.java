@@ -352,8 +352,7 @@ public class IBondImporter {
 
       // reduce the interest-eligible balance by the portion of the starting balance redeemed
       current.eligibleBal(current.eligibleBal().multiply(
-         BigDecimal.ONE.add(change.divide(startingBal, DECIMAL64)), DECIMAL64)
-         .setScale(2, HALF_UP));
+         BigDecimal.ONE.add(change.divide(startingBal, DECIMAL64))).setScale(2, HALF_UP));
 
       if (curIntTxns != null) {
          curIntTxns.forEach(txn -> txn.endingBal(current.redemptionVal()));
