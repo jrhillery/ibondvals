@@ -251,6 +251,18 @@ public class IBondImporter {
    } // end getCellOfType(int, CellType, Row)
 
    /**
+    * Generic min utility.
+    *
+    * @param a Comparable parameter a
+    * @param b Comparable parameter b
+    * @return Smaller of a or b
+    */
+   private static <T extends Comparable<T>> T min(T a, T b) {
+
+      return a.compareTo(b) <= 0 ? a : b;
+   } // end min(T, T)
+
+   /**
     * @param calcTxns list of calculated interest payment transactions
     * @return Sum of the listed payments' amounts
     */
@@ -410,11 +422,8 @@ public class IBondImporter {
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
       CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
-      YearMonth endMonth = issueMonth.plusYears(MATURITY_YEARS);
-
-      YearMonth firstUnknownMonth = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
-      if (endMonth.isAfter(firstUnknownMonth))
-         endMonth = firstUnknownMonth;
+      YearMonth endMonth = min(issueMonth.plusYears(MATURITY_YEARS),
+         getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL));
       BigDecimal fixedRate = getRateForMonth(issueMonth).fixedRate();
       BigDecimal finalBal = changeForMonth.apply(issueMonth);
       IBondBalanceRec curBals =
