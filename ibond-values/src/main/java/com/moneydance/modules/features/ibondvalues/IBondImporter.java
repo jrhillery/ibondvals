@@ -267,14 +267,21 @@ public class IBondImporter {
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
     * @return Year-month corresponding to the issue month
     */
-   public static YearMonth getDateForTicker(String tickerSymbol) throws MduExcepcionito {
+   public YearMonth getDateForTicker(String tickerSymbol) throws MduExcepcionito {
+      YearMonth issueMonth;
       try {
-
-         return YearMonth.parse(tickerSymbol, TICKER_DATE_FORMATTER);
+         issueMonth = YearMonth.parse(tickerSymbol, TICKER_DATE_FORMATTER);
       } catch (Exception e) {
          throw new MduExcepcionito(e, "Problem parsing date from ticker symbol; %s",
             e.getLocalizedMessage());
       }
+
+      if (issueMonth.isBefore(getIBondRates().firstKey()))
+         throw new MduExcepcionito(null,
+            "No interest rates for I bonds issued as early as %tY-%<tm (%s)",
+            issueMonth, tickerSymbol);
+
+      return issueMonth;
    } // end getDateForTicker(String)
 
    /**
@@ -401,11 +408,6 @@ public class IBondImporter {
          Function<YearMonth, BigDecimal> changeForMonth,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito {
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
-
-      if (issueMonth.isBefore(getIBondRates().firstKey()))
-         throw new MduExcepcionito(null,
-            "No interest rates for I bonds issued as early as %tY-%<tm (%s)",
-            issueMonth, tickerSymbol);
       CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
       YearMonth endMonth = issueMonth.plusYears(MATURITY_YEARS);
