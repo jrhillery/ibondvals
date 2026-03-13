@@ -47,6 +47,7 @@ public class IBondImporter {
    private static final int SEMIANNUAL_MONTHS = 6;
    private static final int MONTHS_TO_LOSE = 3;
    private static final int EARLY_YEARS = 5;
+   private static final int MATURITY_YEARS = 30;
    private static final int RATE_SET_INTERVAL = 6; // months
    private static final BigDecimal INITIAL_UNIT_VALUE = BigDecimal.valueOf(25);
    private static final DateTimeFormatter TICKER_DATE_FORMATTER = new DateTimeFormatterBuilder()
@@ -407,14 +408,17 @@ public class IBondImporter {
             issueMonth, tickerSymbol);
       CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
+      YearMonth endMonth = issueMonth.plusYears(MATURITY_YEARS);
 
       YearMonth firstUnknownMonth = getIBondRates().lastKey().plusMonths(RATE_SET_INTERVAL);
+      if (endMonth.isAfter(firstUnknownMonth))
+         endMonth = firstUnknownMonth;
       BigDecimal fixedRate = getRateForMonth(issueMonth).fixedRate();
       BigDecimal finalBal = changeForMonth.apply(issueMonth);
       IBondBalanceRec curBals =
          new IBondBalanceRec(finalBal, finalBal, INITIAL_UNIT_VALUE, issueMonth);
 
-      while (curBals.month().isBefore(firstUnknownMonth)) {
+      while (curBals.month().isBefore(endMonth)) {
          BigDecimal inflateRate = getRateForMonth(curBals.month()).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
@@ -424,7 +428,7 @@ public class IBondImporter {
             .add(iBondIntTxns.tailKeys(curBals.month()).stream()
                .map(tMonth -> addAmounts(iBondIntTxns.getForMonth(tMonth)))
                .reduce(BigDecimal.ZERO, BigDecimal::add)));
-      } // end while before first unknown month
+      } // end while more months
 
       iBondIntTxns.tailKeys(curBals.month()).forEach(tailingMonth ->
          updateBalances(curBals, tailingMonth, iBondIntTxns, changeForMonth));
