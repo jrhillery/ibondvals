@@ -16,14 +16,12 @@ class IBondBalanceRec {
      * Sole constructor.
      *
      * @param redemptionVal Redemption value
-     * @param eligibleBal   Balance eligible to earn interest
      * @param unitVal       Unit value for interest calculations
      * @param month         Corresponding month
      */
-    public IBondBalanceRec(BigDecimal redemptionVal, BigDecimal eligibleBal,
-                           BigDecimal unitVal, YearMonth month) {
+    public IBondBalanceRec(BigDecimal redemptionVal, BigDecimal unitVal, YearMonth month) {
         this.redemptionVal = redemptionVal;
-        this.eligibleBal = eligibleBal;
+        this.eligibleBal = redemptionVal;
         this.unitVal = unitVal;
         this.month = month;
 

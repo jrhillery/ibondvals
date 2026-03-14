@@ -46,9 +46,9 @@ public class IBondImporter {
    private static final int INTEREST_RATE_DIGITS = 4;
    private static final int SEMIANNUAL_MONTHS = 6;
    private static final int PENALTY_MONTHS = 3;
-   private static final int PENALTY_YEARS = 5;
-   private static final int MATURITY_YEARS = 30;
    private static final BigDecimal INITIAL_UNIT_VALUE = BigDecimal.valueOf(25);
+   private static final int MATURITY_YEARS = 30;
+   private static final int PENALTY_YEARS = 5;
    private static final DateTimeFormatter TICKER_DATE_FORMATTER = new DateTimeFormatterBuilder()
       .parseCaseInsensitive()
       .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
@@ -254,7 +254,7 @@ public class IBondImporter {
     *
     * @param a Comparable parameter a
     * @param b Comparable parameter b
-    * @return Smaller of a or b
+    * @return Earlier of a or b
     */
    private static <T extends Comparable<T>> T min(T a, T b) {
 
@@ -392,8 +392,7 @@ public class IBondImporter {
          if (interest.signum() > 0) {
             YearMonth candidate = curBals.month().plusMonths(PENALTY_MONTHS);
             YearMonth accrualMonth = curBals.month().isBefore(penaltyFreeMonth)
-               ? candidate.isBefore(penaltyFreeMonth) ? candidate : penaltyFreeMonth
-               : curBals.month();
+               ? min(candidate, penaltyFreeMonth) : curBals.month();
             iBondIntTxns.add(new CalcTxn(accrualMonth, interest, memo));
          }
 
@@ -419,13 +418,13 @@ public class IBondImporter {
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito {
       CalcTxnList iBondIntTxns = new CalcTxnList();
       YearMonth issueMonth = getDateForTicker(tickerSymbol);
-      YearMonth penaltyFreeMonth = issueMonth.plusYears(PENALTY_YEARS);
+      BigDecimal issueVal = monthNet.apply(issueMonth);
+
+      IBondBalanceRec curBals = new IBondBalanceRec(issueVal, INITIAL_UNIT_VALUE, issueMonth);
       YearMonth endMonth = min(issueMonth.plusYears(MATURITY_YEARS),
          getIBondRates().lastKey().plusMonths(SEMIANNUAL_MONTHS));
       BigDecimal fixedRate = getRateForMonth(issueMonth).fixedRate();
-      BigDecimal issueVal = monthNet.apply(issueMonth);
-      IBondBalanceRec curBals =
-         new IBondBalanceRec(issueVal, issueVal, INITIAL_UNIT_VALUE, issueMonth);
+      YearMonth penaltyFreeMonth = issueMonth.plusYears(PENALTY_YEARS);
 
       while (curBals.month().isBefore(endMonth)) {
          BigDecimal inflateRate = getRateForMonth(curBals.month()).inflationRate();
