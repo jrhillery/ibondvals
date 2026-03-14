@@ -92,8 +92,9 @@ public class Main extends FeatureModule implements AutoCloseable {
     * Closes this resource, relinquishing any underlying resources.
     */
    public void close() {
+      if (this.iBondWorker != null)
+         this.iBondWorker = this.iBondWorker.stopExecute();
       this.iBondWindow = null;
-      this.iBondWorker = null;
 
    } // end close()
 
