@@ -9,6 +9,7 @@ import org.dhatim.fastexcel.reader.ReadableWorkbook;
 import org.dhatim.fastexcel.reader.Row;
 import org.dhatim.fastexcel.reader.Sheet;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.net.URI;
@@ -95,38 +96,22 @@ public class IBondImporter {
    } // end getProperty(String)
 
    /**
-    * Retrieve a row spliterator over the data sheet
-    * of a spreadsheet on the TreasuryDirect website.
-    *
-    * @return Row spliterator over data sheet
-    * @throws MduException Problem retrieving TreasuryDirect spreadsheet data sheet
+    * {@return fastexcel-reader ReadableWorkbook of a spreadsheet on the TreasuryDirect website}
     */
-   private Spliterator<Row> getDataRowIterator() throws MduException {
+   private ReadableWorkbook getIBondRateHistoryWorkbook() throws MduException {
       String uriStr = getProperty("url.treasurydirect");
       try {
          this.iBondRateHistory = new URI(uriStr);
       } catch (Exception e) {
          throw new MduException(e, "Problem parsing URL [%s]", uriStr);
       }
-      ReadableWorkbook wb;
 
       try (InputStream iStream = this.iBondRateHistory.toURL().openStream()) {
-         wb = new ReadableWorkbook(iStream);
+         return new ReadableWorkbook(iStream);
       } catch (Exception e) {
          throw new MduException(e, "Problem accessing %s", this.iBondRateHistory);
       } // end try-with-resources
-
-      String dataSheetName = getProperty("sheet.data");
-      Sheet dataSheet = wb.findSheet(dataSheetName).orElseThrow(
-         () -> new MduException(null, "Unable to find sheet %s in %s",
-            dataSheetName, this.iBondRateHistory));
-
-      try {
-         return dataSheet.openStream().spliterator();
-      } catch (Exception e) {
-         throw new MduException(e, "Problem accessing rows in %s", this.iBondRateHistory);
-      }
-   } // end getDataRowIterator()
+   } // end getIBondRateHistoryWorkbook()
 
    /**
     * Retrieve an interest rate value from a spreadsheet
@@ -160,9 +145,23 @@ public class IBondImporter {
     */
    public void loadIBondRates() throws MduException {
       if (this.iBondRates == null) {
-         Spliterator<Row> dataRowItr = getDataRowIterator();
-         loadColumnIndexes(dataRowItr);
-         this.iBondRates = getIBondRates(dataRowItr);
+         try (ReadableWorkbook wb = getIBondRateHistoryWorkbook()) {
+            String dataSheetName = getProperty("sheet.data");
+            Sheet dataSheet = wb.findSheet(dataSheetName).orElseThrow(
+               () -> new MduException(null, "Unable to find sheet %s in %s",
+                  dataSheetName, this.iBondRateHistory));
+
+            Spliterator<Row> dataRowItr;
+            try {
+               dataRowItr = dataSheet.openStream().spliterator();
+            } catch (Exception e) {
+               throw new MduException(e, "Problem accessing rows in %s", this.iBondRateHistory);
+            }
+            loadColumnIndexes(dataRowItr);
+            this.iBondRates = getIBondRates(dataRowItr);
+         } catch (IOException e) {
+            throw new MduException(e, "Problem closing %s", this.iBondRateHistory);
+         }
       }
 
    } // end loadIBondRates()
