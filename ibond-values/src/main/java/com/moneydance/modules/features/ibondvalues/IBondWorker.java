@@ -145,17 +145,17 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
       long amountTotal = changes.stream().mapToLong(SplitTxn::getAmount).sum();
       int decimalPlaces = investAccount.getCurrencyType().getDecimalPlaces();
-      BigDecimal changeTotal = BigDecimal.valueOf(amountTotal).movePointLeft(decimalPlaces);
+      BigDecimal netChange = BigDecimal.valueOf(amountTotal).movePointLeft(decimalPlaces);
 
       if (!changes.isEmpty()) {
          MdLog.debug(() -> changes.stream().map(txn -> "%s on %s"
             .formatted(MdUtil.getTxnAmount(txn), MdUtil.convDateIntToLocal(txn.getDateInt())))
             .collect(Collectors.joining("; ", "From %s:%s add "
                .formatted(investAccount.getAccountName(), txnList.account().getAccountName()),
-               " => %s for the month".formatted(changeTotal))));
+               " => %s for the month".formatted(netChange))));
       }
 
-      return changeTotal;
+      return netChange;
    } // end monthNet(YearMonth, Account, InvestTxnList)
 
    /**
