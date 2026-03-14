@@ -139,7 +139,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
     * @param txnList       List of investment transactions for a securities account
     * @return Sum of deposits and redemptions in the given month
     */
-   private BigDecimal changeForMonth(
+   private BigDecimal monthNet(
          YearMonth month, Account investAccount, InvestTxnList txnList) {
       List<SplitTxn> changes = txnList.getChangesForMonth(month);
 
@@ -156,7 +156,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
       }
 
       return changeTotal;
-   } // end changeForMonth(YearMonth, Account, InvestTxnList)
+   } // end monthNet(YearMonth, Account, InvestTxnList)
 
    /**
     * Store any new interest payments for this security.
@@ -174,7 +174,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
 
       if (!txnList.isEmpty()) {
          CalcTxnList txns = this.importer.calcIBondInterestTxns(ticker,
-            month -> changeForMonth(month, invAccount, txnList),
+            month -> monthNet(month, invAccount, txnList),
             newSecurity ? MdLog::debug : msgSupplier -> {});
 
          // avoid repeat display of interest rates

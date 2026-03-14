@@ -45,8 +45,8 @@ public class IBondImporter {
 
    private static final int INTEREST_RATE_DIGITS = 4;
    private static final int SEMIANNUAL_MONTHS = 6;
-   private static final int MONTHS_TO_LOSE = 3;
-   private static final int EARLY_YEARS = 5;
+   private static final int PENALTY_MONTHS = 3;
+   private static final int PENALTY_YEARS = 5;
    private static final int MATURITY_YEARS = 30;
    private static final BigDecimal INITIAL_UNIT_VALUE = BigDecimal.valueOf(25);
    private static final DateTimeFormatter TICKER_DATE_FORMATTER = new DateTimeFormatterBuilder()
@@ -335,19 +335,19 @@ public class IBondImporter {
    /**
     * Update current balances for a specified month.
     *
-    * @param current        Current balances to update
-    * @param month          The month to add
-    * @param iBondIntTxns   Collection of interest payment transactions
-    * @param changeForMonth Function providing total net deposits and redemptions for a month
+    * @param current      Current balances to update
+    * @param month        The month to add
+    * @param iBondIntTxns Collection of interest payment transactions
+    * @param monthNet     Function providing total net deposits and redemptions for a month
     */
    private static void updateBalances(IBondBalanceRec current, YearMonth month,
-         CalcTxnList iBondIntTxns, Function<YearMonth, BigDecimal> changeForMonth) {
+         CalcTxnList iBondIntTxns, Function<YearMonth, BigDecimal> monthNet) {
       // Start by adding calculated interest for this month
       List<CalcTxn> curIntTxns = iBondIntTxns.getForMonth(month);
       BigDecimal startingBal = current.redemptionVal().add(addAmounts(curIntTxns));
 
       // Add redemption total (typically zero or negative value) for this month
-      BigDecimal change = changeForMonth.apply(month);
+      BigDecimal change = monthNet.apply(month);
       current.redemptionVal(startingBal.add(change));
 
       // reduce the interest-eligible balance by the portion of the starting balance redeemed
@@ -361,21 +361,21 @@ public class IBondImporter {
    } // end updateBalances(IBondBalanceRec, YearMonth, CalcTxnList, Function)
 
    /**
-    * Add I bond interest payments for months that do not compound to a specified list.
+    * Add I bond interest payments that do not compound to a specified list.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     * Details of interest rate calculations are in the US Code of Federal Regulations
     * <a href="https://www.ecfr.gov/current/title-31/subtitle-B/chapter-II/subchapter-A/part-359">
-    *     Title 31 Subtitle B Chapter II Subchapter A Part 359</a>.
+    *    Title 31 Subtitle B Chapter II Subchapter A Part 359</a>.
     *
-    * @param curBals        Current balances in calculation
-    * @param compositeRate  Composite interest rate to use
-    * @param year5Age       Date I bond stops losing the last 3 months of interest
-    * @param iBondIntTxns   Collection of interest payment transactions
-    * @param changeForMonth Function providing total net deposits and redemptions for a month
+    * @param curBals          Current balances in calculation
+    * @param compositeRate    Composite interest rate to use
+    * @param penaltyFreeMonth Month I bond stops losing the last 3 months of interest
+    * @param iBondIntTxns     Collection of interest payment transactions
+    * @param monthNet         Function providing total net deposits and redemptions for a month
     */
-   private static void addNonCompoundingMonths(IBondBalanceRec curBals,
-         BigDecimal compositeRate, YearMonth year5Age, CalcTxnList iBondIntTxns,
-         Function<YearMonth, BigDecimal> changeForMonth) {
+   private static void addInterestTxns(IBondBalanceRec curBals,
+         BigDecimal compositeRate, YearMonth penaltyFreeMonth, CalcTxnList iBondIntTxns,
+         Function<YearMonth, BigDecimal> monthNet) {
       BigDecimal unitVal = curBals.unitVal(), priorUnitVal = unitVal;
       BigDecimal monthlyMultiplier = BigDecimal.valueOf(
          Math.pow(1.0 + compositeRate.doubleValue() / 2.0, 1.0 / SEMIANNUAL_MONTHS));
@@ -390,49 +390,49 @@ public class IBondImporter {
          curBals.month(curBals.month().plusMonths(1));
 
          if (interest.signum() > 0) {
-            YearMonth candidate = curBals.month().plusMonths(MONTHS_TO_LOSE);
-            YearMonth accrualMonth = curBals.month().isBefore(year5Age)
-               ? candidate.isBefore(year5Age) ? candidate : year5Age
+            YearMonth candidate = curBals.month().plusMonths(PENALTY_MONTHS);
+            YearMonth accrualMonth = curBals.month().isBefore(penaltyFreeMonth)
+               ? candidate.isBefore(penaltyFreeMonth) ? candidate : penaltyFreeMonth
                : curBals.month();
             iBondIntTxns.add(new CalcTxn(accrualMonth, interest, memo));
          }
 
-         updateBalances(curBals, curBals.month(), iBondIntTxns, changeForMonth);
+         updateBalances(curBals, curBals.month(), iBondIntTxns, monthNet);
          priorUnitVal = roundedUnitVal;
       } // end for non-compounding months
       curBals.unitVal(priorUnitVal);
 
-   } // end addNonCompoundingMonths(IBondBalanceRec, BigDecimal, YearMonth, CalcTxnList, Function)
+   } // end addInterestTxns(IBondBalanceRec, BigDecimal, YearMonth, CalcTxnList, Function)
 
    /**
     * Calculate Series I savings bond interest payment transactions.
     * Note: {@code loadIBondRates} must have been called on this instance earlier.
     *
-    * @param tickerSymbol   Ticker symbol in the format IBondYYYYMM
-    * @param changeForMonth Function providing total net deposits and redemptions for a month
-    * @param displayRates   Consumer of interest rate message producer lambdas
+    * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
+    * @param monthNet     Function providing total net deposits and redemptions for a month
+    * @param displayRates Consumer of interest rate message producer lambdas
     * @return Collection of calculated interest payment transactions
     * @throws MduExcepcionito Problem getting interest rates for the supplied ticker symbol
     */
    public CalcTxnList calcIBondInterestTxns(String tickerSymbol,
-         Function<YearMonth, BigDecimal> changeForMonth,
+         Function<YearMonth, BigDecimal> monthNet,
          Consumer<Supplier<String>> displayRates) throws MduExcepcionito {
-      YearMonth issueMonth = getDateForTicker(tickerSymbol);
       CalcTxnList iBondIntTxns = new CalcTxnList();
-      YearMonth year5Age = issueMonth.plusYears(EARLY_YEARS);
+      YearMonth issueMonth = getDateForTicker(tickerSymbol);
+      YearMonth penaltyFreeMonth = issueMonth.plusYears(PENALTY_YEARS);
       YearMonth endMonth = min(issueMonth.plusYears(MATURITY_YEARS),
          getIBondRates().lastKey().plusMonths(SEMIANNUAL_MONTHS));
       BigDecimal fixedRate = getRateForMonth(issueMonth).fixedRate();
-      BigDecimal finalBal = changeForMonth.apply(issueMonth);
+      BigDecimal issueVal = monthNet.apply(issueMonth);
       IBondBalanceRec curBals =
-         new IBondBalanceRec(finalBal, finalBal, INITIAL_UNIT_VALUE, issueMonth);
+         new IBondBalanceRec(issueVal, issueVal, INITIAL_UNIT_VALUE, issueMonth);
 
       while (curBals.month().isBefore(endMonth)) {
          BigDecimal inflateRate = getRateForMonth(curBals.month()).inflationRate();
          BigDecimal compositeRate = combineRate(fixedRate, inflateRate);
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curBals.month(), compositeRate.scaleByPowerOfTen(2)));
-         addNonCompoundingMonths(curBals, compositeRate, year5Age, iBondIntTxns, changeForMonth);
+         addInterestTxns(curBals, compositeRate, penaltyFreeMonth, iBondIntTxns, monthNet);
          curBals.eligibleBal(curBals.redemptionVal()
             .add(iBondIntTxns.tailKeys(curBals.month()).stream()
                .map(tMonth -> addAmounts(iBondIntTxns.getForMonth(tMonth)))
@@ -440,7 +440,7 @@ public class IBondImporter {
       } // end while more months
 
       iBondIntTxns.tailKeys(curBals.month()).forEach(tailingMonth ->
-         updateBalances(curBals, tailingMonth, iBondIntTxns, changeForMonth));
+         updateBalances(curBals, tailingMonth, iBondIntTxns, monthNet));
 
       return iBondIntTxns;
    } // end calcIBondInterestTxns(String, Function, Consumer)
