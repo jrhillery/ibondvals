@@ -6,7 +6,7 @@ import java.util.function.Consumer;
 import java.util.function.Predicate;
 
 /**
- * Collection of calculated interest payment transactions that are indexed by month.
+ * Collection of calculated interest payment transactions, indexed by month.
  */
 public class CalcTxnList {
     private final TreeMap<YearMonth, List<CalcTxn>> txnListMap = new TreeMap<>();
@@ -19,7 +19,8 @@ public class CalcTxnList {
      */
     public void add(CalcTxn txnRec) {
 
-        this.txnListMap.computeIfAbsent(txnRec.payMonth(), k -> new ArrayList<>()).add(txnRec);
+        this.txnListMap.computeIfAbsent(txnRec.payMonth(), k -> new ArrayList<>())
+            .add(txnRec);
 
     } // end add(CalcTxn)
 
@@ -44,14 +45,8 @@ public class CalcTxnList {
      * @return Ordered collection of months we have that follow the given month
      */
     public NavigableSet<YearMonth> tailKeys(YearMonth fromMonth) {
-        if (this.txnListMap.isEmpty()) {
 
-            return new TreeSet<>();
-        } else {
-
-            return this.txnListMap.navigableKeySet()
-                .subSet(fromMonth, false, this.txnListMap.lastKey(), true);
-        }
+        return this.txnListMap.navigableKeySet().tailSet(fromMonth, false);
     } // end tailKeys(YearMonth)
 
     /**
