@@ -350,9 +350,11 @@ public class IBondImporter {
       BigDecimal change = monthNet.apply(month);
       current.redemptionVal(startingBal.add(change));
 
-      // reduce the interest-eligible balance by the portion of the starting balance redeemed
-      current.eligibleBal(current.eligibleBal().multiply(
-         BigDecimal.ONE.add(change.divide(startingBal, DECIMAL64))).setScale(2, HALF_UP));
+      if (change.compareTo(BigDecimal.ZERO) != 0 && startingBal.compareTo(BigDecimal.ZERO) != 0) {
+         // reduce the interest-eligible balance by the portion of the starting balance redeemed
+         current.eligibleBal(current.eligibleBal().multiply(
+            BigDecimal.ONE.add(change.divide(startingBal, DECIMAL64))).setScale(2, HALF_UP));
+      }
 
       if (curIntTxns != null) {
          curIntTxns.forEach(txn -> txn.endingBal(current.redemptionVal()));
