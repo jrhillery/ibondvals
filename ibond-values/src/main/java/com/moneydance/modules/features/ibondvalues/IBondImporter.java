@@ -36,6 +36,8 @@ public class IBondImporter {
    private Properties props = null;
    /** Mapping from months to historical I bond interest rates */
    private TreeMap<YearMonth, IBondRateRec> iBondRates = null;
+   /** History column header handlers */
+   private final HashMap<String, Consumer<Integer>> histColHdrHandlers = new HashMap<>();
    /** Column index of semiannual inflation interest rates */
    private int iRateCol = -1;
    /** Column index of fixed interest rates */
@@ -50,6 +52,8 @@ public class IBondImporter {
    private static final BigDecimal INITIAL_UNIT_VALUE = BigDecimal.valueOf(25);
    private static final int MATURITY_YEARS = 30;
    private static final int PENALTY_YEARS = 5;
+
+   private static final Consumer<Integer> NOOP = ignoredInteger -> {};
    private static final DateTimeFormatter TICKER_DATE_FORMATTER = new DateTimeFormatterBuilder()
       .parseCaseInsensitive()
       .appendLiteral(MdUtil.IBOND_TICKER_PREFIX)
@@ -74,8 +78,9 @@ public class IBondImporter {
     * Sole constructor.
     */
    public IBondImporter() throws MduException {
-      IBondHistColHdr.initializeColumns(
-         getProperty("col.irate"), getProperty("col.frate"), getProperty("col.sdate"));
+      this.histColHdrHandlers.put(getProperty("col.irate"), colIdx -> this.iRateCol = colIdx);
+      this.histColHdrHandlers.put(getProperty("col.frate"), colIdx -> this.fRateCol = colIdx);
+      this.histColHdrHandlers.put(getProperty("col.sdate"), colIdx -> this.sDateCol = colIdx);
 
    } // end constructor
 
@@ -188,11 +193,8 @@ public class IBondImporter {
       while (dataRowItr.tryAdvance(row -> {
          for (Cell cell : row) {
             if (cell.getType() == STRING) {
-               switch (IBondHistColHdr.getEnum(cell.asString())) {
-                  case iRate: this.iRateCol = cell.getColumnIndex(); break;
-                  case fRate: this.fRateCol = cell.getColumnIndex(); break;
-                  case sDate: this.sDateCol = cell.getColumnIndex(); break;
-               }
+               this.histColHdrHandlers.getOrDefault(cell.asString(), NOOP)
+                  .accept(cell.getColumnIndex());
             }
          } // end for each cell in the next row
       })) {
@@ -201,7 +203,7 @@ public class IBondImporter {
       }
 
       throw new MduException(null, "Unable to locate column headers %s in %s",
-         IBondHistColHdr.getColumnHeaders(), this.iBondRateHistory);
+         this.histColHdrHandlers.keySet(), this.iBondRateHistory);
 
    } // end loadColumnIndexes(Spliterator<Row>)
 
