@@ -4,7 +4,8 @@ import java.math.BigDecimal;
 import java.time.YearMonth;
 
 /**
- * Data record to hold intermediate balance data while calculating interest transactions.
+ * Data class to hold intermediate balance data while calculating interest transactions.
+ * This is a class rather than a record so it can have setters that make it modifiable in loops.
  */
 class IBondBalanceRec {
     private BigDecimal redemptionVal;
