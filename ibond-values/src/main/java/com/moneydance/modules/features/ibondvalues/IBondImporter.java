@@ -31,9 +31,10 @@ import static org.dhatim.fastexcel.reader.CellType.NUMBER;
 import static org.dhatim.fastexcel.reader.CellType.STRING;
 
 public class IBondImporter {
+   /** Module properties */
+   private final Properties props;
    /** Spreadsheet location */
-   private URI iBondRateHistory = null;
-   private Properties props = null;
+   private final URI iBondRateHistory;
    /** Mapping from months to historical I bond interest rates */
    private TreeMap<YearMonth, IBondRateRec> iBondRates = null;
    /** History column header handlers */
@@ -78,9 +79,17 @@ public class IBondImporter {
     * Sole constructor.
     */
    public IBondImporter() throws MduException {
+      this.props = MdUtil.loadProps(propertiesFileName, getClass());
       this.histColHdrHandlers.put(getProperty("col.irate"), colIdx -> this.iRateCol = colIdx);
       this.histColHdrHandlers.put(getProperty("col.frate"), colIdx -> this.fRateCol = colIdx);
       this.histColHdrHandlers.put(getProperty("col.sdate"), colIdx -> this.sDateCol = colIdx);
+
+      String uriStr = getProperty("url.treasurydirect");
+      try {
+         this.iBondRateHistory = new URI(uriStr);
+      } catch (Exception e) {
+         throw new MduException(e, "Problem parsing URL [%s]", uriStr);
+      }
 
    } // end constructor
 
@@ -89,9 +98,6 @@ public class IBondImporter {
     * @return One of our properties
     */
    private String getProperty(String key) throws MduException {
-      if (this.props == null) {
-         this.props = MdUtil.loadProps(propertiesFileName, getClass());
-      }
       String property = this.props.getProperty(key);
       if (property == null)
          throw new MduException(null, "Property [%s] not found in %s",
@@ -104,13 +110,6 @@ public class IBondImporter {
     * {@return fastexcel-reader ReadableWorkbook of a spreadsheet on the TreasuryDirect website}
     */
    private ReadableWorkbook getIBondRateHistoryWorkbook() throws MduException {
-      String uriStr = getProperty("url.treasurydirect");
-      try {
-         this.iBondRateHistory = new URI(uriStr);
-      } catch (Exception e) {
-         throw new MduException(e, "Problem parsing URL [%s]", uriStr);
-      }
-
       try (InputStream iStream = this.iBondRateHistory.toURL().openStream()) {
          return new ReadableWorkbook(iStream);
       } catch (Exception e) {
@@ -145,6 +144,7 @@ public class IBondImporter {
 
    /**
     * Load I bond interest rate history from a spreadsheet on the TreasuryDirect website.
+    * Runs on worker thread.
     *
     * @throws MduException Problem retrieving or interpreting TreasuryDirect spreadsheet
     */
