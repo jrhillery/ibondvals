@@ -55,10 +55,10 @@ public class InvestTxnList {
         if (txns != null) {
             for (AbstractTxn txn : txns) {
                 if (txn.getParentTxn().getInvestTxnType() == DIVIDEND_REINVEST
-                        && txn instanceof SplitTxn
+                        && txn instanceof SplitTxn splitTxn
                         && txnRec.memo().equalsIgnoreCase(txn.getParentTxn().getMemo())) {
 
-                    return Optional.of((SplitTxn) txn);
+                    return Optional.of(splitTxn);
                 }
             }
         }
@@ -77,8 +77,8 @@ public class InvestTxnList {
                 .forEach((date, txnList) -> txnList.forEach(txn -> {
 
             if (txn.getParentTxn().getInvestTxnType() != DIVIDEND_REINVEST
-                    && txn instanceof SplitTxn) {
-                txns.add((SplitTxn) txn);
+                    && txn instanceof SplitTxn splitTxn) {
+                txns.add(splitTxn);
             }
         }));
 
