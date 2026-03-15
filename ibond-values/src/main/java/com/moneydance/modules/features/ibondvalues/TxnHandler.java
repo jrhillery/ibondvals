@@ -11,6 +11,8 @@ import static com.infinitekind.moneydance.model.InvestTxnType.DIVIDEND_REINVEST;
  * Handles deferred creation of interest payment transactions.
  */
 public class TxnHandler {
+    /** Like a money market account, price will always be 1 */
+    public static final double FIXED_PRICE = 1.0;
     private final AccountBook book;
     private final Account investAccount;
     private final Account securityAccount;
@@ -65,7 +67,7 @@ public class TxnHandler {
         invFields.hasAmount = true;
         invFields.category = AccountUtil.getDefaultCategoryForAcct(this.investAccount);
         invFields.hasCategory = true;
-        invFields.price = 1.0;
+        invFields.price = FIXED_PRICE;
         invFields.hasPrice = true;
         invFields.security = this.securityAccount;
         invFields.hasSecurity = true;

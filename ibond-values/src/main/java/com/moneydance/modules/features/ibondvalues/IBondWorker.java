@@ -210,6 +210,7 @@ public class IBondWorker extends SwingWorker<Boolean, String>
                Optional<Account> secAccount = MdUtil.getSubAccountByName(invAccount, secName);
 
                if (secAccount.isPresent()) {
+                  // keep track of transaction presence for this security
                   newSecurity = storeNewIBondTxns(
                      secAccount.get(), ticker, invAccount, newSecurity);
                }

@@ -20,6 +20,7 @@ public class IBondWindow extends JFrame {
    private JButton btnCommit;
    private HTMLPane pnOutputLog;
    private final AwtScreenUtil screenUtil = new AwtScreenUtil(this);
+   /** Reference to object to manage staged changes */
    private StagedInterface staged = null;
    private final ArrayDeque<AutoCloseable> closeableResources = new ArrayDeque<>();
 
