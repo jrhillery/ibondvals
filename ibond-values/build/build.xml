@@ -43,10 +43,11 @@ http://jakarta.apache.org/ant/index.html
     <jar destfile="${dist}/ibondvalues.mxt">
       <fileset dir="${src}/src/main/resources"/>
       <fileset dir="${build}" includes="com/**"/>
-      <zipfileset src="${fastexcel.lib}/aalto-xml-1.3.3.jar" includesfile="aalto-xml-1.3.3.pkgLst"/>
-      <zipfileset src="${fastexcel.lib}/commons-compress-1.26.2.jar" includesfile="commons-compress-1.26.2.pkgLst"/>
-      <zipfileset src="${fastexcel.lib}/commons-io-2.16.1.jar" includesfile="commons-io-2.16.1.pkgLst"/>
-      <zipfileset src="${fastexcel.lib}/fastexcel-reader-0.18.0.jar" includesfile="fastexcel-reader-0.18.0.pkgLst"/>
+      <zipfileset src="${fastexcel.lib}/aalto-xml-1.3.4.jar" includesfile="aalto-xml-1.3.4.pkgLst"/>
+      <zipfileset src="${fastexcel.lib}/commons-compress-1.28.0.jar" includesfile="commons-compress-1.28.0.pkgLst"/>
+      <zipfileset src="${fastexcel.lib}/commons-io-2.20.0.jar" includesfile="commons-io-2.20.0.pkgLst"/>
+      <zipfileset src="${fastexcel.lib}/commons-lang3-3.18.0.jar" includesfile="commons-lang3-3.18.0.pkgLst"/>
+      <zipfileset src="${fastexcel.lib}/fastexcel-reader-0.20.0.jar" includesfile="fastexcel-reader-0.20.0.pkgLst"/>
       <zipfileset src="${fastexcel.lib}/stax2-api-4.2.2.jar" includesfile="stax2-api-4.2.2.pkgLst"/>
     </jar>
 
