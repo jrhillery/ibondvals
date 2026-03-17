@@ -111,6 +111,10 @@ public class IBondImporter {
     */
    private ReadableWorkbook getIBondRateHistoryWorkbook() throws MduException {
       try (InputStream iStream = this.iBondRateHistory.toURL().openStream()) {
+
+         // fastexcel-reader Javadoc explains the following constructor loads the whole
+         // xlsx file into memory, so it's okay that we close the stream after construction
+         // https://javadoc.io/doc/org.dhatim/fastexcel-reader
          return new ReadableWorkbook(iStream);
       } catch (Exception e) {
          throw new MduException(e, "Problem accessing %s", this.iBondRateHistory);
