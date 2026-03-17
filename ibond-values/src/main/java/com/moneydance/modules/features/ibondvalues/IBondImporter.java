@@ -196,7 +196,7 @@ public class IBondImporter {
    private void loadColumnIndexes(Spliterator<Row> dataRowItr) throws MduException {
       while (dataRowItr.tryAdvance(row -> {
          for (Cell cell : row) {
-            if (cell.getType() == STRING) {
+            if (cell != null && cell.getType() == STRING) {
                this.histColHdrHandlers.getOrDefault(cell.asString(), NOOP)
                   .accept(cell.getColumnIndex());
             }
