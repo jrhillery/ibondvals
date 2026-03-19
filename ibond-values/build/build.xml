@@ -7,7 +7,7 @@ http://jakarta.apache.org/ant/index.html
   <property name="src" value=".."/>
   <property name="build" value="."/>
   <property name="moneydance.devkit" value="${user.home}/Documents/Prog/moneydance-devkit-5.1"/>
-  <property name="moneydance.runtime" value="/Program Files/Moneydance"/>
+  <property name="moneydance.runtime" value="C:/Program Files/Moneydance"/>
   <property name="fastexcel.lib" value="${user.home}/Documents/Prog/fastexcel"/>
   <property name="mdutil" value="${src}/../../mdutil/md-util"/>
   <property name="swingutil" value="${src}/../../mdutil/swing-util"/>
