@@ -18,7 +18,7 @@ should reflect your available balances — without logging in to TreasuryDirect.
 
 ## Installation
 
-1. Download the latest [release](./releases).
+1. Download the latest [release](https://github.com/jrhillery/ibondvals/releases/latest).
 
 2. Follow [Moneydance's published documentation to install extensions](https://infinitekind.tenderapp.com/kb/extensions-2/installing-extensions).  
    Use the `Add From File...` option to load the `ibondvalues.mxt` file.
@@ -83,9 +83,9 @@ this extension handles partial redemptions in a manner that has not been validat
 
 ## Troubleshooting
 
-Raise issues or questions in the GitHub [issues page](./issues).
+Raise issues or questions in this extension's GitHub [issues page](https://github.com/jrhillery/ibondvals/issues).
 Please include a copy of the Moneydance console messages from `Help` > `Console Window`.
 
 ## Links
 
-- 📦 [Releases](./releases)
+- 📦 [Releases](https://github.com/jrhillery/ibondvals/releases)
