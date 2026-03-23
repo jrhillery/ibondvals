@@ -1,9 +1,9 @@
 {
   "vendor" = "John Hillery"
-  "module_build" = "1"
-  "minbuild" = "1000"
-  "vendor.url" = "https://github.com/jrhillery/ibondvals"
-  "module_name" = "I Bond Values"
-  "module_desc" = "<html><body><title>I Bond Values</title><p>Pulls I bond interest rates from TreasuryDirect.gov and creates artificial interest transactions in Moneydance.</p></body></html>"
-  "desc" = "Pulls I bond interest rates from TreasuryDirect.gov and creates artificial interest transactions in Moneydance."
+  "module_build" = "${module.build}"
+  "minbuild" = "5059"
+  "vendor.url" = "${project.url}"
+  "module_name" = "${project.name}"
+  "module_desc" = "<html><body><title>${project.name}</title><p>${project.description}</p></body></html>"
+  "desc" = "${project.description}"
 }
