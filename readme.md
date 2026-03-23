@@ -23,24 +23,23 @@ should reflect your available balances — without logging in to TreasuryDirect.
 2. Follow [Moneydance's published documentation to install extensions](https://infinitekind.tenderapp.com/kb/extensions-2/installing-extensions).  
    Use the `Add From File...` option to load the `ibondvalues.mxt` file.
 
-3. **The extension has not yet been audited and signed by The Infinite Kind**,
-   so you'll get a warning asking you if you really want to continue loading
-   the extension, click **Yes** to continue loading the extension.
+3. **The extension has not yet been audited and signed by The Infinite Kind**, so
+   you'll get a warning asking you if you really want to continue loading the extension.
+   Click **Yes** to proceed.
 
 4. You can now run the extension by going to **Extensions > I Bond Values**.
 
 ## Usage Details
 
-If not already done, create one or more investment accounts to house your I bonds.
+If you haven't already, create one or more investment accounts to house your I bonds.
 Each account can hold multiple I bonds.
-A suggested approach is to have one account in Moneydance for each
-account on TreasuryDirect.
+A suggested approach is to have one account in Moneydance for each account on TreasuryDirect.
 
 ### Default Category
 
 This extension creates its artificial interest transactions with the
 default category of the corresponding investment account.
-So setting up the account default category to something like
+Setting up the account's default category to something like
 `Investment Income:US Government Interest` works well.
 
 ### Ticker Symbol Naming Convention
@@ -63,15 +62,15 @@ So use a share price of \$1 in your buy and sell Moneydance transactions.
 ### Run The I Bond Values Moneydance Extension
 
 Use the Moneydance extension menu to run this extension.
-This extension will examine your holdings and calculate any missing artificial interest transactions.
-These are displayed for your review.
+This extension will examine your holdings, calculate any missing
+artificial interest transactions and display them for your review.
 If you approve, select the `Commit` action to store the calculated transactions in Moneydance.
 If everything is up to date, a message says it found no new interest payment data.
 
 ### How Artificial Interest Transactions Are Calculated
 
-An overview of I bond interest is described on the TreasuryDirect
-[website](https://treasurydirect.gov/savings-bonds/i-bonds/i-bonds-interest-rates).
+[TreasuryDirect's website](https://treasurydirect.gov/savings-bonds/i-bonds/i-bonds-interest-rates)
+provides an overview of I bond interest.
 This extension gets interest rates from the xlsx rate history chart linked on that web page.
 This extension calculates interest following details the US Code of Federal Regulations (CFR)
 [Title 31 Subtitle B Chapter II Subchapter A Part 359](https://www.ecfr.gov/current/title-31/subtitle-B/chapter-II/subchapter-A/part-359).
@@ -85,13 +84,15 @@ a monthly growth multiplier is derived from the composite rate:
 \text{monthlyMultiplier} = \left(1 + \frac{\text{compositeRate}}{2}\right)^{1/6}
 ```
 
-Interest is calculated base on a unit value (<span>$25</span> when issued).
-For each of the 6 months, the unit value is stepped forward by this multiplier and rounded to the nearest cent.
+Interest is calculated based on a unit value (<span>$25</span> when issued).
+For each of the 6 months, the unit value is stepped
+forward by this multiplier and rounded to the nearest cent.
 The interest credited is:
 ```math
-\text{interest} = (\text{unitVal}_m - \text{unitVal}_{m-1}) \times \text{eligibleUnits}
+(\text{unitVal}_m - \text{unitVal}_{m-1}) \times \text{eligibleUnits}
 ```
-where *eligible units* reflects the portion of the balance still earning interest after any partial redemptions.
+where *eligible units* reflects the portion of the balance
+still earning interest after any partial redemptions.
 
 After each semiannual period, accrued interest (including interest
 not yet available) is folded back into the balance eligible to earn interest.
@@ -103,7 +104,7 @@ The payable date for these transactions is shifted out 3 months (capped at the p
 #### Known Limitation
 
 Since CFR 359 doesn't detail how partial redemptions are handled,
-this extension handles partial redemptions in a manner that has not been validated.
+this extension handles partial redemptions in a way that has not been validated.
 
 ## Troubleshooting
 
