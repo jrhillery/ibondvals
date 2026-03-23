@@ -81,12 +81,16 @@ and monthly interest transactions are generated for that period.
 
 Because I bond interest accrues monthly but compounds only semiannually,
 a monthly growth multiplier is derived from the composite rate:
-$$\text{monthlyMultiplier} = \left(1 + \frac{\text{compositeRate}}{2}\right)^{1/6}$$
+```math
+\text{monthlyMultiplier} = \left(1 + \frac{\text{compositeRate}}{2}\right)^{1/6}
+```
 
-Interest is calculated base on a unit value (\$25 when issued).
+Interest is calculated base on a unit value (<span>$25</span> when issued).
 For each of the 6 months, the unit value is stepped forward by this multiplier and rounded to the nearest cent.
 The interest credited is:
-$$\text{interest} = (\text{unitVal}_m - \text{unitVal}_{m-1}) \times \text{eligibleUnits}$$
+```math
+\text{interest} = (\text{unitVal}_m - \text{unitVal}_{m-1}) \times \text{eligibleUnits}
+```
 where *eligible units* reflects the portion of the balance still earning interest after any partial redemptions.
 
 After each semiannual period, accrued interest (including interest
