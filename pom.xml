@@ -33,7 +33,7 @@
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib</artifactId> <!-- seem to need this -->
+            <artifactId>kotlin-stdlib</artifactId> <!-- AppDebug seems to need this -->
             <version>1.9.23</version>
             <scope>provided</scope>
         </dependency>
