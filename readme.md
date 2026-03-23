@@ -1,7 +1,7 @@
 # I Bond Values Moneydance Extension
 
-This extension pulls I bond interest rates from TreasuryDirect.gov and creates
-artificial interest transactions in Moneydance so your holdings' current values
+This extension pulls Series I savings bond interest rates from TreasuryDirect.gov and
+creates artificial interest transactions in Moneydance so your holdings' current values
 should reflect your available balances — without logging in to TreasuryDirect.
 
 - Finds I bond securities in your Moneydance investment accounts
@@ -63,7 +63,7 @@ So use a share price of \$1 in your buy and sell Moneydance transactions.
 ### Run The I Bond Values Moneydance Extension
 
 Use the Moneydance extension menu to run this extension.
-It will examine your holdings and calculate any missing artificial interest transactions.
+This extension will examine your holdings and calculate any missing artificial interest transactions.
 These are displayed for your review.
 If you approve, select the `Commit` action to store the calculated transactions in Moneydance.
 If everything is up to date, a message says it found no new interest payment data.
@@ -75,6 +75,26 @@ An overview of I bond interest is described on the TreasuryDirect
 This extension gets interest rates from the xlsx rate history chart linked on that web page.
 This extension calculates interest following details the US Code of Federal Regulations (CFR)
 [Title 31 Subtitle B Chapter II Subchapter A Part 359](https://www.ecfr.gov/current/title-31/subtitle-B/chapter-II/subchapter-A/part-359).
+This involves stepping 6 months at a time.
+For each semiannual period, the composite rate is calculated,
+and monthly interest transactions are generated for that period.
+
+Because I bond interest accrues monthly but compounds only semiannually,
+a monthly growth multiplier is derived from the composite rate:
+$$\text{monthlyMultiplier} = \left(1 + \frac{\text{compositeRate}}{2}\right)^{1/6}$$
+
+Interest is calculated base on a unit value (\$25 when issued).
+For each of the 6 months, the unit value is stepped forward by this multiplier and rounded to the nearest cent.
+The interest credited is:
+$$\text{interest} = (\text{unitVal}_m - \text{unitVal}_{m-1}) \times \text{eligibleUnits}$$
+where *eligible units* reflects the portion of the balance still earning interest after any partial redemptions.
+
+After each semiannual period, accrued interest (including interest
+not yet available) is folded back into the balance eligible to earn interest.
+
+The 3-month early-redemption penalty (applicable for bonds held fewer than 5 years)
+is handled by deferring affected interest transactions.
+The payable date for these transactions is shifted out 3 months (capped at the penalty expiry date).
 
 #### Known Limitation
 

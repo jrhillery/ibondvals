@@ -368,7 +368,7 @@ public class IBondImporter {
    } // end updateBalances(IBondBalanceRec, YearMonth, CalcTxnList, Function)
 
    /**
-    * Add I bond interest payments that do not compound to a specified list.
+    * Generate monthly (non-compounding) interest transactions within a 6-month rate period.
     * Bonds cashed-in in less than 5 years, lose the last 3 months of interest.
     * Details of interest rate calculations are in the US Code of Federal Regulations
     * <a href="https://www.ecfr.gov/current/title-31/subtitle-B/chapter-II/subchapter-A/part-359">
@@ -411,7 +411,8 @@ public class IBondImporter {
    } // end addInterestTxns(IBondBalanceRec, BigDecimal, YearMonth, CalcTxnList, Function)
 
    /**
-    * Calculate Series I savings bond interest payment transactions.
+    * Top-level orchestrator for computing all interest payment transactions for a Series I
+    * savings bond, from issue through maturity (or through the latest known rate data).
     * Note: {@code loadIBondRates} must have been called on this instance earlier.
     *
     * @param tickerSymbol Ticker symbol in the format IBondYYYYMM
@@ -439,6 +440,7 @@ public class IBondImporter {
          displayRates.accept(() -> "For I bonds issued %s, starting %s composite rate is %s%%"
             .formatted(issueMonth, curBals.month(), compositeRate.scaleByPowerOfTen(2)));
          addInterestTxns(curBals, compositeRate, penaltyFreeMonth, iBondIntTxns, monthNet);
+         // compound semiannually, including interest not yet available
          curBals.eligibleBal(curBals.redemptionVal()
             .add(iBondIntTxns.tailKeys(curBals.month()).stream()
                .map(tMonth -> addAmounts(iBondIntTxns.getForMonth(tMonth)))
