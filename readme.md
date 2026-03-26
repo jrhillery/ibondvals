@@ -75,8 +75,8 @@ This extension gets interest rates from the xlsx rate history chart linked on th
 This extension calculates interest following details the US Code of Federal Regulations (CFR)
 [Title 31 Subtitle B Chapter II Subchapter A Part 359](https://www.ecfr.gov/current/title-31/subtitle-B/chapter-II/subchapter-A/part-359).
 This involves stepping 6 months at a time.
-For each semiannual period, the composite rate is calculated,
-and monthly interest transactions are generated for that period.
+For each semiannual period, the composite rate is
+calculated and monthly interest transactions are generated.
 
 Because I bond interest accrues monthly but compounds only semiannually,
 a monthly growth multiplier is derived from the composite rate:
@@ -94,12 +94,12 @@ The interest credited is:
 where *eligible units* reflects the portion of the balance
 still earning interest after any partial redemptions.
 
-After each semiannual period, accrued interest (including interest
-not yet available) is folded back into the balance eligible to earn interest.
-
 The 3-month early-redemption penalty (applicable for bonds held fewer than 5 years)
 is handled by deferring affected interest transactions.
 The payable date for these transactions is shifted out 3 months (capped at the penalty expiry date).
+
+After each semiannual period, accrued interest (including interest
+not yet available) is folded back into the balance eligible to earn interest.
 
 #### Known Limitation
 
