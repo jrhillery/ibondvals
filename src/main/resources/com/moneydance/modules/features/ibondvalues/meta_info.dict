@@ -1,6 +1,6 @@
 {
   "vendor" = "John Hillery"
-  "module_build" = "${module.build}"
+  "module_build" = "${buildNumber}"
   "minbuild" = "5059"
   "vendor.url" = "${project.url}"
   "module_name" = "${project.name}"
