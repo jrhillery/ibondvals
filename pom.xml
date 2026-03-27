@@ -4,7 +4,7 @@
     <parent>
         <groupId>com.leastlogic</groupId>
         <artifactId>MdProjects</artifactId>
-        <version>1-SNAPSHOT</version>
+        <version>1.0-SNAPSHOT</version>
         <relativePath>../mdutil/MdProjects</relativePath>
     </parent>
 
@@ -24,12 +24,12 @@
         <dependency>
             <groupId>com.leastlogic</groupId>
             <artifactId>md-util</artifactId>
-            <version>1-SNAPSHOT</version>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.leastlogic</groupId>
             <artifactId>swing-util</artifactId>
-            <version>1-SNAPSHOT</version>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
