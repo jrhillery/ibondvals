@@ -2,7 +2,7 @@
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
-        <groupId>com.leastlogic</groupId>
+        <groupId>com.github.jrhillery</groupId>
         <artifactId>MdProjects</artifactId>
         <version>1.0-SNAPSHOT</version>
         <relativePath>../mdutil/MdProjects</relativePath>
@@ -22,7 +22,7 @@
             <version>0.20.0</version>
         </dependency>
         <dependency>
-            <groupId>com.leastlogic</groupId>
+            <groupId>com.github.jrhillery</groupId>
             <artifactId>md-util</artifactId>
             <version>1.0-SNAPSHOT</version>
         </dependency>
