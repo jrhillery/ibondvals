@@ -1,8 +1,8 @@
 package com.moneydance.modules.features.ibondvalues;
 
-import com.leastlogic.moneydance.util.MdUtil;
-import com.leastlogic.moneydance.util.MduExcepcionito;
-import com.leastlogic.moneydance.util.MduException;
+import io.github.jrhillery.moneydance.MdUtil;
+import io.github.jrhillery.moneydance.MduExcepcionito;
+import io.github.jrhillery.moneydance.MduException;
 import org.dhatim.fastexcel.reader.Cell;
 import org.dhatim.fastexcel.reader.CellType;
 import org.dhatim.fastexcel.reader.ReadableWorkbook;

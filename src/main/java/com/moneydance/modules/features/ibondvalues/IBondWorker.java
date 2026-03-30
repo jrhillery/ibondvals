@@ -1,8 +1,8 @@
 package com.moneydance.modules.features.ibondvalues;
 
 import com.infinitekind.moneydance.model.*;
-import com.leastlogic.moneydance.util.*;
 import com.moneydance.apps.md.controller.FeatureModuleContext;
+import io.github.jrhillery.moneydance.*;
 
 import javax.swing.SwingWorker;
 import java.math.BigDecimal;
@@ -14,7 +14,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 
 import static com.infinitekind.moneydance.model.Account.AccountType.INVESTMENT;
-import static com.leastlogic.moneydance.util.MdUtil.IBOND_TICKER_PREFIX;
+import static io.github.jrhillery.moneydance.MdUtil.IBOND_TICKER_PREFIX;
 
 public class IBondWorker extends SwingWorker<Boolean, String>
       implements StagedInterface, AutoCloseable {

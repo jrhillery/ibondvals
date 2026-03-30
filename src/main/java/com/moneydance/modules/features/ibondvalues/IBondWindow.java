@@ -1,10 +1,10 @@
 package com.moneydance.modules.features.ibondvalues;
 
-import com.leastlogic.moneydance.util.MdLog;
-import com.leastlogic.moneydance.util.MdStorageUtil;
-import com.leastlogic.moneydance.util.StagedInterface;
-import com.leastlogic.swing.util.AwtScreenUtil;
-import com.leastlogic.swing.util.HTMLPane;
+import io.github.jrhillery.moneydance.MdLog;
+import io.github.jrhillery.moneydance.MdStorageUtil;
+import io.github.jrhillery.moneydance.StagedInterface;
+import io.github.jrhillery.swing.AwtScreenUtil;
+import io.github.jrhillery.swing.HTMLPane;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;

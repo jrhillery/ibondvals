@@ -1,7 +1,7 @@
 package com.moneydance.modules.features.ibondvalues;
 
 import com.infinitekind.moneydance.model.*;
-import com.leastlogic.moneydance.util.MdUtil;
+import io.github.jrhillery.moneydance.MdUtil;
 
 import java.math.BigDecimal;
 

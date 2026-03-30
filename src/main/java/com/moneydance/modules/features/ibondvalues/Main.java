@@ -1,6 +1,6 @@
 package com.moneydance.modules.features.ibondvalues;
 
-import com.leastlogic.moneydance.util.MdLog;
+import io.github.jrhillery.moneydance.MdLog;
 import com.moneydance.apps.md.controller.FeatureModule;
 
 /**

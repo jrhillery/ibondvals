@@ -4,7 +4,7 @@ import com.infinitekind.moneydance.model.AbstractTxn;
 import com.infinitekind.moneydance.model.Account;
 import com.infinitekind.moneydance.model.SplitTxn;
 import com.infinitekind.moneydance.model.TransactionSet;
-import com.leastlogic.moneydance.util.MdUtil;
+import io.github.jrhillery.moneydance.MdUtil;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
