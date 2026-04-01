@@ -22,15 +22,15 @@
             <version>0.20.0</version>
         </dependency>
         <dependency>
+            <groupId>com.infinitekind</groupId>
+            <artifactId>moneydance-dev</artifactId>
+            <version>5.1</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>com.github.jrhillery</groupId>
             <artifactId>md-util</artifactId>
             <version>1.0-SNAPSHOT</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-stdlib</artifactId> <!-- CurrencyTable.getAllCurrencies seems to need this -->
-            <version>1.9.23</version>
-            <scope>provided</scope>
         </dependency>
     </dependencies>
 
