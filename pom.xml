@@ -3,9 +3,9 @@
 
     <parent>
         <groupId>com.github.jrhillery</groupId>
-        <artifactId>MdProjects</artifactId>
+        <artifactId>MdHobby</artifactId>
         <version>1.0-SNAPSHOT</version>
-        <relativePath>../mdutil/MdProjects</relativePath>
+        <relativePath>../mdutil</relativePath>
     </parent>
 
     <artifactId>ibondvalues</artifactId>
