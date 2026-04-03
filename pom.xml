@@ -13,7 +13,7 @@
     <description>
         Pulls I bond interest rates from TreasuryDirect.gov and creates artificial interest transactions in Moneydance.
     </description>
-    <url>https://github.com/jrhillery/ibondvals</url>
+    <url>https://github.com/jrhillery/ibondvalues</url>
 
     <dependencies>
         <dependency>
